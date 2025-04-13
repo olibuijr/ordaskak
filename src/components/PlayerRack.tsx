@@ -16,10 +16,11 @@ const TileComponent: React.FC<{
   onClick: () => void;
 }> = ({ tile, isSelected, onClick }) => (
   <div 
-    className={`rack-tile letter-tile w-14 h-14 md:w-16 md:h-16 m-1 ${
-      isSelected ? 'ring-2 ring-game-accent-pink transform -translate-y-2' : ''
+    className={`rack-tile letter-tile w-14 h-14 md:w-16 md:h-16 m-1 cursor-pointer ${
+      isSelected ? 'ring-2 ring-game-accent-pink transform -translate-y-4' : ''
     }`}
     onClick={onClick}
+    draggable="true"
   >
     <span className="text-2xl font-bold">{tile.letter || '?'}</span>
     {tile.letter && <span className="letter-tile-value">{tile.value}</span>}

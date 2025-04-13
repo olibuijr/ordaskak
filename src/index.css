@@ -1,4 +1,6 @@
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -45,6 +47,7 @@
   body {
     @apply bg-game-dark text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    font-family: 'Inter', sans-serif;
   }
 }
 
@@ -60,6 +63,7 @@
   border: 1px solid #c19c65;
   position: relative;
   overflow: hidden;
+  transition: transform 0.2s ease-in-out;
 }
 
 .letter-tile::before {
@@ -119,7 +123,11 @@
 }
 
 .rack-tile:hover {
-  transform: translateY(-10px);
+  transform: translateY(-10px) !important;
+}
+
+.rack-tile.selected {
+  transform: translateY(-16px) !important;
 }
 
 .glow-effect {
@@ -150,4 +158,19 @@ canvas {
   width: 100%;
   height: 100%;
   position: relative;
+}
+
+/* Fix for the game board height */
+.h-[60vh], .h-[65vh] {
+  min-height: 500px;
+}
+
+/* Make sure tiles are clearly visible and interactive */
+.letter-tile {
+  cursor: grab !important;
+  z-index: 10;
+}
+
+.letter-tile:active {
+  cursor: grabbing !important;
 }

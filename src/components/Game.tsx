@@ -1,9 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import GameBoardCanvas from './GameBoard';
 import PlayerRack from './PlayerRack';
 import ScoreBoard from './ScoreBoard';
 import GameControls from './GameControls';
 import GameSetup from './GameSetup';
+import WordHistoryTable from './WordHistoryTable';
 import { 
   initializeGame, 
   GameState, 
@@ -14,7 +16,6 @@ import {
 } from '@/utils/gameLogic';
 import { useToast } from '@/components/ui/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
-import WordHistoryTable from './WordHistoryTable';
 
 const Game: React.FC = () => {
   const [gameState, setGameState] = useState<GameState | null>(null);
@@ -48,12 +49,25 @@ const Game: React.FC = () => {
       setSelectedTile(null);
     } else {
       setSelectedTile(tile);
+      toast({
+        title: "Tile Selected",
+        description: `Selected tile ${tile.letter || 'Blank'}. Click on the board to place it.`,
+      });
     }
   };
   
   const handleCellClick = (x: number, y: number) => {
     console.log("Cell clicked:", x, y);
-    if (!gameState || !selectedTile) return;
+    if (!gameState || !selectedTile) {
+      if (!selectedTile) {
+        toast({
+          title: "No tile selected",
+          description: "Please select a tile from your rack first",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
     
     // Check if the cell already has a tile
     if (gameState.board[y][x].tile) {
@@ -98,6 +112,11 @@ const Game: React.FC = () => {
     
     // Clear selection
     setSelectedTile(null);
+    
+    toast({
+      title: "Tile placed",
+      description: `Placed ${placedTile.letter || 'Blank'} at position (${x+1}, ${y+1})`,
+    });
     
     // Update game state
     setGameState(newGameState);
@@ -256,6 +275,10 @@ const Game: React.FC = () => {
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Main game section */}
         <div className="lg:w-3/4 flex flex-col">
+          <h2 className="text-2xl font-bold mb-3 text-game-accent-blue">
+            {currentPlayer.name}'s Turn
+          </h2>
+          
           {/* 3D Game board */}
           <div className="h-[60vh] md:h-[65vh] relative rounded-lg overflow-hidden border border-game-accent-blue/30">
             <GameBoardCanvas 
@@ -264,8 +287,15 @@ const Game: React.FC = () => {
             />
           </div>
           
+          {/* Instructions */}
+          <div className="mt-3 mb-2 text-center text-sm text-white/70">
+            {selectedTile 
+              ? "Click on the board to place your selected tile" 
+              : "Select a tile from your rack to play"}
+          </div>
+          
           {/* Player rack */}
-          <div className="mt-4">
+          <div className="mt-2">
             <PlayerRack
               tiles={currentPlayer.rack}
               isCurrentPlayer={true}

@@ -101,7 +101,7 @@ const Cell: React.FC<{
             position={[0.26, 0.08, 0.26]}
             color="black"
             fontSize={0.2}
-            font="/fonts/Inter-Medium.woff"
+            font="/fonts/Inter-Bold.woff"
             anchorX="center"
             anchorY="middle"
           >
@@ -114,7 +114,7 @@ const Cell: React.FC<{
             position={[0, 0.06, 0]}
             color="black"
             fontSize={0.2}
-            font="/fonts/Inter-Medium.woff"
+            font="/fonts/Inter-Bold.woff"
             anchorX="center"
             anchorY="middle"
           >
@@ -195,8 +195,6 @@ const Board: React.FC<GameBoardProps> = ({ board, onCellClick }) => {
 };
 
 const GameBoardCanvas: React.FC<GameBoardProps> = (props) => {
-  console.log("Rendering GameBoardCanvas", props.board.length);
-  
   return (
     <div className="w-full h-full rounded-lg overflow-hidden">
       <Canvas shadows dpr={[1, 2]}>
