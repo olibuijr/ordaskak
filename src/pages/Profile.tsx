@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { pb } from "@/services/pocketbase";
+import { pb, getUserById } from "@/services/pocketbase";
 import { useState, useEffect } from "react";
 import { toast } from "@/components/ui/use-toast";
 import { 
@@ -27,11 +27,23 @@ const Profile = () => {
   const [avatar, setAvatar] = useState<File | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string>('');
 
+  // Update the timestamp whenever user changes or when the component mounts
   useEffect(() => {
     if (user?.id) {
+      // Update the URL with a timestamp to prevent caching
       setAvatarUrl(`${pb.baseUrl}/api/files/users/${user.id}/avatar?t=${Date.now()}`);
     }
   }, [user?.id]);
+
+  // Get detailed user stats using the new getUserById function
+  const { data: userDetails, isLoading: userLoading } = useQuery({
+    queryKey: ["userDetails", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      return await getUserById(user.id);
+    },
+    enabled: !!user?.id,
+  });
 
   const { data: userStats, isLoading: statsLoading } = useQuery({
     queryKey: ["userStats", user?.id],
@@ -110,6 +122,10 @@ const Profile = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setAvatar(e.target.files[0]);
+      
+      // Preview the avatar image immediately
+      const fileUrl = URL.createObjectURL(e.target.files[0]);
+      setAvatarUrl(fileUrl);
     }
   };
 
@@ -136,6 +152,9 @@ const Profile = () => {
       </div>
     );
   }
+
+  // Use the user details from the API if available, otherwise fall back to context user
+  const displayUser = userDetails || user;
 
   return (
     <div className="h-[calc(100vh-56px)] bg-[#0F1624] text-white overflow-y-auto p-4 md:p-6">
