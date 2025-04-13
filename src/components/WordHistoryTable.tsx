@@ -10,13 +10,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatDistanceToNow } from 'date-fns';
+import { CheckCircle2, ShuffleDeck, FastForward } from 'lucide-react';
+
+interface GameMove {
+  id?: string;
+  word: string;
+  player: string;
+  score: number;
+  moveType?: 'place_tiles' | 'shuffle' | 'pass';
+  created?: string;
+}
 
 interface WordHistoryTableProps {
-  words: Array<{
-    word: string;
-    player: string;
-    score: number;
-  }>;
+  words: GameMove[];
 }
 
 const WordHistoryTable: React.FC<WordHistoryTableProps> = ({ words }) => {
@@ -44,15 +51,29 @@ const WordHistoryTable: React.FC<WordHistoryTableProps> = ({ words }) => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Orð</TableHead>
+              <TableHead className="w-[40px]"></TableHead>
+              <TableHead>Orð/Aðgerð</TableHead>
               <TableHead>Leikmaður</TableHead>
               <TableHead className="text-right">Stig</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {words.map((entry, index) => (
-              <TableRow key={index}>
-                <TableCell className="font-medium">{entry.word}</TableCell>
+              <TableRow key={entry.id || index}>
+                <TableCell>
+                  {entry.moveType === 'shuffle' ? (
+                    <ShuffleDeck className="h-4 w-4 text-yellow-400" />
+                  ) : entry.moveType === 'pass' ? (
+                    <FastForward className="h-4 w-4 text-blue-400" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4 text-green-400" />
+                  )}
+                </TableCell>
+                <TableCell className="font-medium">
+                  {entry.moveType === 'shuffle' ? 'Blöndun' : 
+                   entry.moveType === 'pass' ? 'Umferð sleppt' : 
+                   entry.word || 'Orð spilað'}
+                </TableCell>
                 <TableCell>{entry.player}</TableCell>
                 <TableCell className="text-right">{entry.score}</TableCell>
               </TableRow>

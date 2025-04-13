@@ -24,7 +24,8 @@ import {
   updateGameBoardState, 
   fetchGameById, 
   updatePlayerRacks,
-  getPlayerRacks 
+  getPlayerRacks,
+  fetchGameMoves
 } from '@/services/games';
 import { getUserById } from '@/services/users';
 import { useLocation } from 'react-router-dom';
@@ -57,7 +58,14 @@ const Game: React.FC = () => {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [selectedTile, setSelectedTile] = useState<Tile | null>(null);
   const [placedTilesMap, setPlacedTilesMap] = useState<Map<string, PlacedTile>>(new Map());
-  const [wordHistory, setWordHistory] = useState<Array<{word: string, player: string, score: number}>>([]);
+  const [wordHistory, setWordHistory] = useState<Array<{
+    id?: string;
+    word: string;
+    player: string;
+    score: number;
+    moveType?: 'place_tiles' | 'shuffle' | 'pass';
+    created?: string;
+  }>>([]);
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { user } = useAuth();
@@ -203,24 +211,15 @@ const Game: React.FC = () => {
         }
         
         try {
-          const movesRecords = await pb.collection('gamemoves').getList(1, 50, {
-            filter: `game = "${id}"`,
-            sort: 'created'
-          });
+          const gameMovesHistory = await fetchGameMoves(id);
           
-          if (movesRecords && movesRecords.items.length > 0) {
-            const history = movesRecords.items.map(move => ({
-              word: move.word || '',
-              player: playersArray.find(p => p.id === move.user)?.name || 'Unknown',
-              score: move.score_gained || 0
-            }));
+          if (gameMovesHistory && gameMovesHistory.length > 0) {
+            setWordHistory(gameMovesHistory);
             
-            setWordHistory(history);
-            
-            movesRecords.items.forEach(move => {
-              const playerIndex = updatedGameState.players.findIndex(p => p.id === move.user);
+            gameMovesHistory.forEach(move => {
+              const playerIndex = updatedGameState.players.findIndex(p => p.id === move.playerId);
               if (playerIndex !== -1) {
-                updatedGameState.players[playerIndex].score += (move.score_gained || 0);
+                updatedGameState.players[playerIndex].score += (move.score || 0);
               }
             });
           }
@@ -483,8 +482,8 @@ const Game: React.FC = () => {
         userId: user.id,
         word: word,
         score: scoreToAdd,
-        board_state: JSON.stringify(newGameState.board),
-        player_index: newGameState.currentPlayerIndex
+        moveType: 'place_tiles',
+        placedTiles: newGameState.placedTiles
       });
     }
     
@@ -533,6 +532,25 @@ const Game: React.FC = () => {
     
     setGameState(newGameState);
     
+    if (gameId && user) {
+      saveGameMove({
+        gameId: gameId,
+        userId: user.id,
+        word: '',
+        score: 0,
+        moveType: 'shuffle'
+      });
+      
+      const newMoveEntry = {
+        player: currentPlayer.name,
+        word: '',
+        score: 0,
+        moveType: 'shuffle'
+      };
+      
+      setWordHistory(prev => [...prev, newMoveEntry]);
+    }
+    
     if (gameId) {
       updatePlayerRacks(gameId, newGameState.players, newGameState.tileBag);
     }
@@ -551,6 +569,25 @@ const Game: React.FC = () => {
     
     if (newGameState.placedTiles.length > 0) {
       handleRecallTiles();
+    }
+    
+    if (gameId && user) {
+      saveGameMove({
+        gameId: gameId,
+        userId: user.id,
+        word: '',
+        score: 0,
+        moveType: 'pass'
+      });
+      
+      const newMoveEntry = {
+        player: currentPlayer.name,
+        word: '',
+        score: 0,
+        moveType: 'pass'
+      };
+      
+      setWordHistory(prev => [...prev, newMoveEntry]);
     }
     
     currentPlayer.isActive = false;

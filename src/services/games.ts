@@ -1,4 +1,3 @@
-
 import { pb } from './pocketbase';
 import { getCurrentUser } from './authentication';
 
@@ -138,23 +137,41 @@ export const saveGameMove = async (moveData) => {
       return null;
     }
     
+    // Cancel any previous save for this game/user
+    const requestKey = `save_move_${moveData.gameId}_${moveData.userId}`;
+    cancelPreviousRequest(requestKey);
+    
+    // Create a new abort controller for this request
+    const controller = new AbortController();
+    activeRequests.set(requestKey, controller);
+    
     const data = {
       game: moveData.gameId,
-      user: moveData.userId,
-      word: moveData.word || '',
-      score: moveData.score || 0,
-      board_state: moveData.board_state || '{}',
-      player_index: moveData.player_index || 0,
-      move_type: 'word',
       player: moveData.userId,
-      score_gained: moveData.score || 0
+      move_type: moveData.moveType || 'place_tiles',
+      word_played: moveData.word || '',
+      score_gained: moveData.score || 0,
+      tiles_placed: moveData.placedTiles ? JSON.stringify(moveData.placedTiles) : null
     };
     
+    console.log("Formatted move data being saved:", data);
+    
     try {
-      const record = await pb.collection('gamemoves').create(data);
+      const record = await pb.collection('gamemoves').create(data, {
+        signal: controller.signal
+      });
+      
+      // Clean up the controller after request is complete
+      activeRequests.delete(requestKey);
+      
       console.log("Game move saved successfully:", record);
       return record;
     } catch (error) {
+      if (error.name === 'AbortError') {
+        console.log("Request to save game move was cancelled, a newer request takes precedence");
+        return null;
+      }
+      
       console.error('Error saving game move:', error);
       console.error('Error details:', error.response?.data);
       return null;
@@ -162,6 +179,57 @@ export const saveGameMove = async (moveData) => {
   } catch (error) {
     console.error('Error in saveGameMove:', error);
     return null;
+  }
+};
+
+// Fetch game moves for a specific game
+export const fetchGameMoves = async (gameId) => {
+  try {
+    if (!gameId) {
+      console.error("Cannot fetch game moves: No game ID provided");
+      return [];
+    }
+    
+    // Cancel any previous fetch for this game's moves
+    const requestKey = `fetch_moves_${gameId}`;
+    cancelPreviousRequest(requestKey);
+    
+    // Create a new abort controller for this request
+    const controller = new AbortController();
+    activeRequests.set(requestKey, controller);
+    
+    console.log("Fetching moves for game:", gameId);
+    
+    const records = await pb.collection('gamemoves').getList(1, 50, {
+      filter: `game = "${gameId}"`,
+      sort: 'created',
+      expand: 'player',
+      signal: controller.signal
+    });
+    
+    // Clean up the controller after request is complete
+    activeRequests.delete(requestKey);
+    
+    console.log("Fetched game moves:", records.items);
+    
+    return records.items.map(move => ({
+      id: move.id,
+      player: move.expand?.player ? (move.expand.player.name || move.expand.player.username) : 'Unknown',
+      playerId: move.player,
+      word: move.word_played || '',
+      score: move.score_gained || 0,
+      moveType: move.move_type,
+      created: move.created,
+      placedTiles: move.tiles_placed ? JSON.parse(move.tiles_placed) : []
+    }));
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      console.log("Request to fetch game moves was cancelled, a newer request takes precedence");
+      return [];
+    }
+    
+    console.error("Error fetching game moves:", error);
+    return [];
   }
 };
 
