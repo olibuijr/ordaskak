@@ -15,10 +15,8 @@ export const fetchUserGames = async (userId) => {
     console.log("Raw game records:", records.items);
     
     const games = records.items.map(item => {
-      // Correctly handle player IDs and names from the database
       let playerIds = [];
       
-      // Check if players array is available and use it for IDs
       if (item.players && Array.isArray(item.players)) {
         playerIds = item.players;
       }
@@ -28,7 +26,7 @@ export const fetchUserGames = async (userId) => {
       return {
         id: item.id,
         created: item.created,
-        players: playerIds, // Always use IDs here, we'll resolve to names in the component
+        players: playerIds,
         isActive: item.status === 'in_progress', 
         yourScore: item.yourScore,
         winner: item.winner,
@@ -192,7 +190,6 @@ export const updatePlayerRacks = async (gameId, players, tileBag) => {
     console.log("Updating player racks for game:", gameId);
     console.log("Players data:", players);
     
-    // Store the rack data for each player
     const playerRacks = {};
     players.forEach((player, index) => {
       if (player && player.id && player.rack) {
@@ -328,7 +325,6 @@ export const updateGameBoardState = async (gameId, gameState) => {
       return null;
     }
     
-    // Update both the board state and persist player racks
     const playerRacks = {};
     gameState.players.forEach(player => {
       if (player && player.id && player.rack) {

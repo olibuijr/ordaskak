@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import GameBoard from './GameBoard';
 import PlayerRack from './PlayerRack';
@@ -159,6 +160,7 @@ const Game: React.FC = () => {
         
         console.log("Loaded game state:", loadedGameState);
         
+        // Only draw new tiles if rack is empty - this ensures we don't override saved racks
         const updatedGameState = { ...loadedGameState };
         let needUpdate = false;
         
@@ -227,11 +229,15 @@ const Game: React.FC = () => {
     }
   };
 
+  // Immediately save game state changes to the database
   useEffect(() => {
     if (gameState && gameId && !isInitialLoad) {
-      console.log("Game state updated:", gameState);
+      console.log("Game state updated, saving to database:", gameState);
+      
+      // First update the board state
       updateGameBoardState(gameId, gameState);
       
+      // Then ensure player racks are also saved separately
       if (gameState.players && gameState.tileBag) {
         console.log("Updating player racks after game state change");
         updatePlayerRacks(gameId, gameState.players, gameState.tileBag);
