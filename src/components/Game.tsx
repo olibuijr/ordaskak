@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import GameBoard from './GameBoard';
 import PlayerRack from './PlayerRack';
@@ -50,7 +51,7 @@ const Game: React.FC = () => {
       if (record) {
         console.log("Fetched game:", record);
         
-        // Convert player string IDs to player objects
+        // Convert player string IDs to player objects with safety checks
         const playersArray = record.players ? 
           record.players.map((playerId, index) => ({
             id: playerId,
@@ -62,7 +63,7 @@ const Game: React.FC = () => {
             isActive: playerId === record.current_player_index
           })) : [];
         
-        // Find the index of the current player in the players array
+        // Find the index of the current player in the players array with safety check
         const currentPlayerIndex = playersArray.findIndex(player => player.id === record.current_player_index);
         
         console.log("Current player index:", currentPlayerIndex);
@@ -118,7 +119,10 @@ const Game: React.FC = () => {
     
     if (newGameId) {
       setGameId(newGameId);
-      updateGameBoardState(newGameId, newGameState);
+      // Only update game board state if we have valid players
+      if (newGameState.players && newGameState.players.length > 0) {
+        updateGameBoardState(newGameId, newGameState);
+      }
     }
     
     toast({
@@ -413,7 +417,52 @@ const Game: React.FC = () => {
     return <GameSetup onStartGame={handleStartGame} />;
   }
   
-  const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+  // Add a safety check to ensure we have at least one player
+  if (!gameState.players || gameState.players.length === 0) {
+    return (
+      <div className="container mx-auto px-4 py-6 flex flex-col gap-6 min-h-screen">
+        <div className="text-center p-8 bg-game-dark rounded-lg">
+          <h2 className="text-2xl font-bold mb-3 text-game-accent-blue">
+            Villa: Engir leikmenn í boði
+          </h2>
+          <p className="mb-4">Það virðist sem leikurinn hafi ekki verið settur upp rétt.</p>
+          <button 
+            onClick={() => setGameState(null)} 
+            className="bg-game-accent-blue hover:bg-game-accent-blue/80 text-black px-4 py-2 rounded"
+          >
+            Fara til baka
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
+  // Make sure currentPlayerIndex is within bounds
+  const safeCurrentPlayerIndex = gameState.currentPlayerIndex >= 0 && 
+                                gameState.currentPlayerIndex < gameState.players.length ? 
+                                gameState.currentPlayerIndex : 0;
+  
+  const currentPlayer = gameState.players[safeCurrentPlayerIndex];
+  
+  // Final safety check for current player
+  if (!currentPlayer) {
+    return (
+      <div className="container mx-auto px-4 py-6 flex flex-col gap-6 min-h-screen">
+        <div className="text-center p-8 bg-game-dark rounded-lg">
+          <h2 className="text-2xl font-bold mb-3 text-game-accent-blue">
+            Villa: Leikmaður finnst ekki
+          </h2>
+          <p className="mb-4">Það virðist sem gögn um núverandi leikmann séu ógild.</p>
+          <button 
+            onClick={() => setGameState(null)} 
+            className="bg-game-accent-blue hover:bg-game-accent-blue/80 text-black px-4 py-2 rounded"
+          >
+            Fara til baka
+          </button>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="container mx-auto px-4 py-6 flex flex-col gap-6 min-h-screen">

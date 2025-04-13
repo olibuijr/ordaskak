@@ -1,4 +1,3 @@
-
 import PocketBase from 'pocketbase';
 import { GameState } from '@/utils/gameLogic';
 
@@ -184,8 +183,25 @@ export const updateGameBoardState = async (gameId, gameState) => {
   try {
     console.log("Updating game board state for game:", gameId);
     
-    // Get the current player's ID (not the index)
-    const currentPlayerId = gameState.players[gameState.currentPlayerIndex].id;
+    // Safety check to make sure gameState and its properties exist
+    if (!gameState || !gameState.players || !Array.isArray(gameState.players) || gameState.players.length === 0) {
+      console.error("Invalid game state:", gameState);
+      throw new Error("Invalid game state structure");
+    }
+    
+    // Get the current player's ID (not the index) with safety checks
+    const currentPlayerIndex = gameState.currentPlayerIndex >= 0 && 
+                              gameState.currentPlayerIndex < gameState.players.length ? 
+                              gameState.currentPlayerIndex : 0;
+    
+    const currentPlayer = gameState.players[currentPlayerIndex];
+    
+    if (!currentPlayer || !currentPlayer.id) {
+      console.error("Current player not found or has no ID:", currentPlayerIndex, gameState.players);
+      throw new Error("Current player not found or has no ID");
+    }
+    
+    const currentPlayerId = currentPlayer.id;
     console.log("Current player ID to be set:", currentPlayerId);
     
     const data = {
