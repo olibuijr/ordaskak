@@ -1,3 +1,4 @@
+
 import { pb } from './pocketbase';
 import { getCurrentUser } from './authentication';
 
@@ -12,22 +13,23 @@ export const fetchUserGames = async (userId) => {
       expand: 'players'
     });
     
+    console.log("Raw game records:", records.items);
+    
     const games = records.items.map(item => {
-      // Correctly handle player names from the database
-      let playerNames = [];
+      // Correctly handle player IDs and names from the database
+      let playerIds = [];
       
-      // Check if playerNames is available from the database
-      if (item.playerNames && Array.isArray(item.playerNames)) {
-        playerNames = item.playerNames;
-      } else if (item.players && Array.isArray(item.players)) {
-        // Fallback to player IDs if names aren't available
-        playerNames = item.players;
+      // Check if players array is available and use it for IDs
+      if (item.players && Array.isArray(item.players)) {
+        playerIds = item.players;
       }
+      
+      console.log(`Game ${item.id} players:`, playerIds);
       
       return {
         id: item.id,
         created: item.created,
-        players: playerNames,
+        players: playerIds, // Always use IDs here, we'll resolve to names in the component
         isActive: item.status === 'in_progress', 
         yourScore: item.yourScore,
         winner: item.winner,
@@ -36,9 +38,15 @@ export const fetchUserGames = async (userId) => {
       };
     });
     
+    const activeGames = games.filter(game => game.isActive);
+    const completedGames = games.filter(game => !game.isActive);
+    
+    console.log("Processed active games:", activeGames);
+    console.log("Processed completed games:", completedGames);
+    
     return {
-      activeGames: games.filter(game => game.isActive),
-      completedGames: games.filter(game => !game.isActive)
+      activeGames,
+      completedGames
     };
   } catch (error) {
     console.error('Error fetching games:', error);

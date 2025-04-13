@@ -1,4 +1,3 @@
-
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Table,
@@ -11,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Play, Check } from "lucide-react";
 import { useEffect, useState } from "react";
-import { getUserById, getUsersByIds } from "@/services/users";
+import { getUsersByIds } from "@/services/users";
 
 interface GameData {
   id: string;
@@ -49,7 +48,11 @@ const GamesList = ({
       [...activeGames, ...completedGames].forEach(game => {
         if (game.players && Array.isArray(game.players)) {
           game.players.forEach(playerId => {
-            if (typeof playerId === 'string' && playerId.length <= 36 && !playerNameCache[playerId]) {
+            if (typeof playerId === 'string' && 
+                playerId.length > 0 && 
+                playerId.length <= 36 && 
+                playerId.includes('-') && 
+                !playerNameCache[playerId]) {
               playerIds.add(playerId);
             }
           });
@@ -60,14 +63,17 @@ const GamesList = ({
       
       setIsLoading(true);
       try {
-        // Use batch fetch for better performance
         const playerIdsArray = Array.from(playerIds);
+        console.log("Fetching player names for IDs:", playerIdsArray);
+        
         const users = await getUsersByIds(playerIdsArray);
+        console.log("Received user data:", users);
         
         const newPlayerNames: Record<string, string> = {};
         users.forEach(user => {
-          if (user) {
+          if (user && user.id) {
             newPlayerNames[user.id] = user.name || user.username || 'Unknown Player';
+            console.log(`Mapped ${user.id} to ${newPlayerNames[user.id]}`);
           }
         });
         
@@ -88,11 +94,19 @@ const GamesList = ({
     }
     
     return players.map(playerId => {
-      // Check if this is already a name and not an ID
-      if (playerId.length > 36 || !playerId.includes('-')) {
+      if (!playerId || 
+          typeof playerId !== 'string' || 
+          playerId.length > 36 || 
+          !playerId.includes('-')) {
         return playerId;
       }
       
+      const playerName = playerNameCache[playerId];
+      if (playerName) {
+        console.log(`Using cached name for ${playerId}: ${playerName}`);
+      } else {
+        console.log(`No cached name found for ID: ${playerId}`);
+      }
       return playerNameCache[playerId] || 'Loading...';
     }).join(', ');
   };
@@ -124,9 +138,13 @@ const GamesList = ({
                         variant="outline" 
                         size="sm"
                         onClick={() => {
-                          const playerNames = game.players.map(playerId => 
-                            playerNameCache[playerId] || 'Unknown Player'
-                          );
+                          const playerNames = game.players.map(playerId => {
+                            if (typeof playerId !== 'string' || playerId.length > 36 || !playerId.includes('-')) {
+                              return playerId;
+                            }
+                            return playerNameCache[playerId] || 'Unknown Player';
+                          });
+                          
                           onStartGame(
                             game.players.length,
                             playerNames,

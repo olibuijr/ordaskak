@@ -60,10 +60,14 @@ export const getUsersByIds = async (userIds: string[]) => {
     // Create a filter to get all users with IDs in the provided array
     const filter = userIds.map(id => `id = "${id}"`).join(' || ');
     
-    const records = await pb.collection('users').getList(1, userIds.length, {
+    console.log("Fetching users with filter:", filter);
+    
+    const records = await pb.collection('users').getList(1, 100, {
       filter: filter,
       fields: 'id,username,email,name,avatar'
     });
+    
+    console.log(`Found ${records.items.length} users for ${userIds.length} IDs`);
     
     return records.items.map(user => ({
       id: user.id,

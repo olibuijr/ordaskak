@@ -32,7 +32,9 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
     if (!user) return { activeGames: [], completedGames: [] };
     
     try {
-      return await fetchUserGames(user.id);
+      const gameData = await fetchUserGames(user.id);
+      console.log("Fetched game data:", gameData);
+      return gameData;
     } catch (error) {
       console.error('Error fetching games:', error);
       throw error;
@@ -153,6 +155,12 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
   
   const activeGames = gamesData?.activeGames || [];
   const completedGames = gamesData?.completedGames || [];
+  
+  // Log data to help debug
+  console.log("Active games:", activeGames);
+  if (activeGames.length > 0) {
+    console.log("First active game players:", activeGames[0].players);
+  }
   
   return (
     <div className="flex items-center justify-center min-h-screen">
