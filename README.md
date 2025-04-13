@@ -1,73 +1,130 @@
-# Welcome to your Lovable project
 
-## Project info
+# Orðaskák
 
-**URL**: https://lovable.dev/projects/b77894fa-ad66-40f7-9e67-a55a4f4c9aba
+![Orðaskák Logo](public/favicon.ico)
 
-## How can I edit this code?
+## Overview
 
-There are several ways of editing your application.
+Orðaskák (Word Chess) is an Icelandic word game inspired by classic word-building board games. It provides a fun and educational way to improve Icelandic vocabulary while enjoying a strategic multiplayer experience.
 
-**Use Lovable**
+## Features
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/b77894fa-ad66-40f7-9e67-a55a4f4c9aba) and start prompting.
+- **Icelandic-focused gameplay**: Built specifically for the Icelandic language, complete with special characters and appropriate letter distribution
+- **Multiplayer support**: Play with friends in real-time
+- **User accounts**: Track your progress, statistics, and game history
+- **Responsive design**: Play on desktop or mobile devices
+- **Interactive board**: Drag and drop tiles to form words on the game board
 
-Changes made via Lovable will be committed automatically to this repo.
+## Game Rules
 
-**Use your preferred IDE**
+1. Players take turns placing letter tiles on the board to form words
+2. New words must connect to existing words on the board
+3. Words are scored based on:
+   - Letter values (common letters like A are worth less than rare letters like Þ)
+   - Board bonuses (double letter, triple word, etc.)
+4. The game ends when all tiles have been played or when all players pass consecutively
+5. The player with the highest score wins
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Letter Distribution
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+Orðaskák uses a custom letter distribution tailored for Icelandic:
 
-Follow these steps:
+| Letter | Count | Value |   | Letter | Count | Value |
+|--------|-------|-------|---|--------|-------|-------|
+| A      | 10    | 1     |   | N      | 8     | 1     |
+| Á      | 3     | 3     |   | O      | 2     | 4     |
+| B      | 1     | 5     |   | Ó      | 2     | 4     |
+| D      | 4     | 2     |   | P      | 1     | 8     |
+| Ð      | 2     | 4     |   | R      | 6     | 1     |
+| E      | 9     | 1     |   | S      | 5     | 1     |
+| É      | 1     | 6     |   | T      | 5     | 1     |
+| F      | 3     | 3     |   | U      | 3     | 3     |
+| G      | 3     | 3     |   | Ú      | 1     | 6     |
+| H      | 3     | 3     |   | V      | 2     | 4     |
+| I      | 7     | 1     |   | X      | 1     | 10    |
+| Í      | 2     | 4     |   | Y      | 2     | 4     |
+| J      | 1     | 8     |   | Ý      | 1     | 6     |
+| K      | 3     | 3     |   | Þ      | 1     | 8     |
+| L      | 4     | 2     |   | Æ      | 1     | 8     |
+| M      | 2     | 4     |   | Ö      | 1     | 8     |
+|        |       |       |   | ?      | 2     | 0     |
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## Technology Stack
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+- **Frontend**: React with TypeScript
+- **Styling**: Tailwind CSS with shadcn/ui components
+- **Routing**: React Router
+- **State Management**: React hooks and context
+- **Backend**: PocketBase
+- **Data Fetching**: TanStack Query
 
-# Step 3: Install the necessary dependencies.
-npm i
+## Development
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+### Prerequisites
+
+- Node.js (v18 or higher)
+- npm or bun
+
+### Setup
+
+```bash
+# Clone the repository
+git clone <repository-url>
+
+# Navigate to the project directory
+cd orðaskak
+
+# Install dependencies
+npm install
+# or
+bun install
+
+# Start the development server
 npm run dev
+# or
+bun run dev
 ```
 
-**Edit a file directly in GitHub**
+The application will be available at `http://localhost:5173`.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Project Structure
 
-**Use GitHub Codespaces**
+- `/src/components`: React components
+  - `/game`: Game-specific components
+  - `/ui`: Reusable UI components
+- `/src/hooks`: Custom React hooks
+- `/src/services`: API and service functions
+- `/src/utils`: Utility functions and game logic
+- `/src/contexts`: React contexts for state management
+- `/src/pages`: Top-level page components
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Game Architecture
 
-## What technologies are used for this project?
+The game is built using a component-based architecture:
 
-This project is built with:
+- `Game`: Main component that orchestrates the game flow
+- `GameBoard`: Renders the game board and handles tile placement
+- `PlayerRack`: Displays and manages the player's letter tiles
+- `GameControls`: Provides buttons for game actions (play word, shuffle, etc.)
+- `ScoreBoard`: Shows the current scores for all players
+- `WordHistoryTable`: Displays a log of all words played in the game
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Game state is managed through the `useGameState` hook, which handles:
+- Player turns
+- Tile selection and placement
+- Word validation
+- Score calculation
+- Game completion
 
-## How can I deploy this project?
+## Contributing
 
-Simply open [Lovable](https://lovable.dev/projects/b77894fa-ad66-40f7-9e67-a55a4f4c9aba) and click on Share -> Publish.
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-## Can I connect a custom domain to my Lovable project?
+## License
 
-Yes, you can!
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## Acknowledgments
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+- The Icelandic Language Institute for language resources
+- The open-source community for the amazing tools and libraries
