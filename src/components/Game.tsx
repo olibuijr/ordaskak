@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import GameBoardCanvas from './GameBoard';
+import GameBoard from './GameBoard';
 import PlayerRack from './PlayerRack';
 import ScoreBoard from './ScoreBoard';
 import GameControls from './GameControls';
@@ -279,9 +279,9 @@ const Game: React.FC = () => {
             {currentPlayer.name}'s Turn
           </h2>
           
-          {/* 3D Game board */}
-          <div className="h-[60vh] md:h-[65vh] relative rounded-lg overflow-hidden border border-game-accent-blue/30">
-            <GameBoardCanvas 
+          {/* 2D Game board */}
+          <div className="h-[60vh] md:h-[65vh] relative rounded-lg overflow-hidden border border-game-accent-blue/30 bg-game-dark">
+            <GameBoard 
               board={gameState.board} 
               onCellClick={handleCellClick}
             />
