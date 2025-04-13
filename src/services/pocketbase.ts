@@ -28,11 +28,14 @@ export const fetchUserGames = async (userId) => {
     // Fetch all games and filter on the client side
     const records = await pb.collection('games').getList(1, 50, {
       sort: '-created',
+      expand: 'players',
     });
     
     // Filter games by user ID in the client
     const userGames = records.items.filter(game => 
-      game.created_by === userId || game.userId === userId
+      game.created_by === userId || 
+      game.userId === userId || 
+      (game.players && game.players.includes(userId))
     );
     
     const games = userGames.map(item => ({
@@ -88,6 +91,12 @@ export const createNewGame = async (data) => {
       throw new Error("User must be logged in to create a game");
     }
     
+    // Get player IDs from the selected players
+    const selectedUserIds = data.selectedUsers ? data.selectedUsers.map(user => user.id) : [];
+    
+    // Make sure the current user is included in the players array
+    const playerIds = [currentUser.id, ...selectedUserIds];
+    
     // Format data to match the required fields for PocketBase
     // The current_player_index is now a relation to the user ID who starts the game
     const gameData = {
@@ -98,7 +107,7 @@ export const createNewGame = async (data) => {
       // Store player names in a separate field for our UI
       playerNames: data.playerNames,
       // The players field must be a valid relation to user IDs
-      players: [currentUser.id], // Include only the current user as a player
+      players: playerIds, // Include both the current user and selected players
       isActive: true,
       userId: currentUser.id
     };
@@ -106,7 +115,7 @@ export const createNewGame = async (data) => {
     console.log("Sending formatted game data:", gameData);
     
     try {
-      // Create the game with the current user as the current player
+      // Create the game with the current user as the current player and selected players
       const record = await pb.collection('games').create(gameData);
       console.log("Game created successfully:", record);
       return record;

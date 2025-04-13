@@ -108,6 +108,7 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
       const data = {
         name: `Leikur ${new Date().toLocaleString('is-IS')}`,
         playerNames: playerNames,
+        selectedUsers: selectedUsers, // Pass the selected users to createNewGame
         isActive: true,
         userId: user.id
       };
