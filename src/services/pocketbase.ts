@@ -1,3 +1,4 @@
+
 import PocketBase from 'pocketbase';
 
 // Create a single PocketBase instance for the entire app
@@ -37,8 +38,8 @@ export const fetchUserGames = async (userId) => {
     const games = userGames.map(item => ({
       id: item.id,
       created: item.created,
-      players: item.players || [],
-      isActive: item.status === 'in_progress', // Updated to match valid status
+      players: item.playerNames || [], // Use playerNames as fallback
+      isActive: item.status === 'in_progress', 
       yourScore: item.yourScore,
       winner: item.winner,
       userId: item.created_by || item.userId,
@@ -58,25 +59,26 @@ export const fetchUserGames = async (userId) => {
 // Create a new game with all required fields
 export const createNewGame = async (data) => {
   try {
-    // Based on the error message, we need to:
-    // 1. Set current_player_index correctly
-    // 2. Include players field as an array
-    // 3. Use a valid status value (not "active")
+    console.log("Creating new game with data:", data);
     
-    // Format data to match the required fields from the error message
+    // Format data to match the required fields for PocketBase
     const gameData = {
       name: data.name || `Game ${new Date().toLocaleString('is-IS')}`,
-      created_by: data.userId, // Required field
-      current_player_index: 0, // Required field, starting with first player
-      status: 'in_progress', // Changed from "active" to "in_progress"
-      players: data.players.map(name => ({ name })), // Format players as array of objects
-      // Any other fields we want to keep
-      playerNames: data.players, // Store player names for easy access
+      created_by: data.userId,
+      current_player_index: 0,
+      status: 'in_progress',
+      // Store player names directly in a simple format the API can accept
+      playerNames: data.players,
+      // This is the format the API expects for the players field
+      players: data.players,
       isActive: true,
       userId: data.userId
     };
     
+    console.log("Sending formatted game data:", gameData);
+    
     const record = await pb.collection('games').create(gameData);
+    console.log("Game created successfully:", record);
     return record;
   } catch (error) {
     console.error('Error creating game:', error);

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -61,6 +62,7 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
     
     try {
       const selectedPlayers = playerNames.slice(0, playerCount);
+      console.log("Creating game with players:", selectedPlayers);
       
       const data = {
         name: `Leikur ${new Date().toLocaleString('is-IS')}`,
