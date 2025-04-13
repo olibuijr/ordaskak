@@ -2,7 +2,7 @@
 import { pb } from './pocketbase';
 
 // Search for users to add to a game
-export const searchUsers = async (query) => {
+export const searchUsers = async (query: string) => {
   if (!query || query.length < 2) return [];
   
   try {
@@ -28,7 +28,7 @@ export const searchUsers = async (query) => {
 };
 
 // Get a specific user by ID
-export const getUserById = async (userId) => {
+export const getUserById = async (userId: string) => {
   if (!userId) return null;
   
   try {
@@ -49,5 +49,31 @@ export const getUserById = async (userId) => {
   } catch (error) {
     console.error('Error fetching user:', error);
     return null;
+  }
+};
+
+// Batch fetch multiple users by their IDs
+export const getUsersByIds = async (userIds: string[]) => {
+  if (!userIds || userIds.length === 0) return [];
+  
+  try {
+    // Create a filter to get all users with IDs in the provided array
+    const filter = userIds.map(id => `id = "${id}"`).join(' || ');
+    
+    const records = await pb.collection('users').getList(1, userIds.length, {
+      filter: filter,
+      fields: 'id,username,email,name,avatar'
+    });
+    
+    return records.items.map(user => ({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      name: user.name || user.username,
+      avatar: user.avatar ? `${pb.baseUrl}/api/files/users/${user.id}/avatar?t=${Date.now()}` : null
+    }));
+  } catch (error) {
+    console.error('Error batch fetching users:', error);
+    return [];
   }
 };

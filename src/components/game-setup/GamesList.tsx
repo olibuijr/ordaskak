@@ -1,3 +1,4 @@
+
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Table,
@@ -10,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Play, Check } from "lucide-react";
 import { useEffect, useState } from "react";
-import { getUserById } from "@/services/users";
+import { getUserById, getUsersByIds } from "@/services/users";
 
 interface GameData {
   id: string;
@@ -39,6 +40,7 @@ const GamesList = ({
   formatDate 
 }: GamesListProps) => {
   const [playerNameCache, setPlayerNameCache] = useState<Record<string, string>>({});
+  const [isLoading, setIsLoading] = useState(false);
   
   useEffect(() => {
     const fetchPlayerNames = async () => {
@@ -47,29 +49,34 @@ const GamesList = ({
       [...activeGames, ...completedGames].forEach(game => {
         if (game.players && Array.isArray(game.players)) {
           game.players.forEach(playerId => {
-            if (typeof playerId === 'string' && !playerNameCache[playerId]) {
+            if (typeof playerId === 'string' && playerId.length <= 36 && !playerNameCache[playerId]) {
               playerIds.add(playerId);
             }
           });
         }
       });
       
-      const newPlayerNames: Record<string, string> = {};
-      for (const playerId of playerIds) {
-        try {
-          const user = await getUserById(playerId);
-          if (user) {
-            newPlayerNames[playerId] = user.name || user.username;
-          } else {
-            newPlayerNames[playerId] = 'Unknown Player';
-          }
-        } catch (error) {
-          console.error(`Error fetching player name for ID ${playerId}:`, error);
-          newPlayerNames[playerId] = 'Unknown Player';
-        }
-      }
+      if (playerIds.size === 0) return;
       
-      setPlayerNameCache(prev => ({ ...prev, ...newPlayerNames }));
+      setIsLoading(true);
+      try {
+        // Use batch fetch for better performance
+        const playerIdsArray = Array.from(playerIds);
+        const users = await getUsersByIds(playerIdsArray);
+        
+        const newPlayerNames: Record<string, string> = {};
+        users.forEach(user => {
+          if (user) {
+            newPlayerNames[user.id] = user.name || user.username || 'Unknown Player';
+          }
+        });
+        
+        setPlayerNameCache(prev => ({ ...prev, ...newPlayerNames }));
+      } catch (error) {
+        console.error("Error fetching player names:", error);
+      } finally {
+        setIsLoading(false);
+      }
     };
     
     fetchPlayerNames();
@@ -81,6 +88,7 @@ const GamesList = ({
     }
     
     return players.map(playerId => {
+      // Check if this is already a name and not an ID
       if (playerId.length > 36 || !playerId.includes('-')) {
         return playerId;
       }
