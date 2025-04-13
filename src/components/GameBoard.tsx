@@ -56,18 +56,20 @@ const GameBoard: React.FC<GameBoardProps> = ({ board, onCellClick }) => {
                   <span className="text-xs font-bold opacity-80">{label}</span>
                 )}
                 
-                {/* Display placed tile */}
+                {/* Display placed tile with improved sizing */}
                 {cell.tile && (
-                  <div className={`letter-tile absolute inset-0 flex items-center justify-center
-                    ${cell.tile.isNew ? 'ring-2 ring-[#9b87f5] animate-pulse' : ''}`}>
-                    <span className="text-xl font-bold text-[#1A1F2C] drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]">
-                      {cell.tile.letter || '?'}
-                    </span>
-                    {cell.tile.letter && (
-                      <span className="absolute bottom-0.5 right-1 text-xs font-bold text-[#1A1F2C]">
-                        {cell.tile.value}
+                  <div className={`letter-tile absolute inset-0 flex items-center justify-center 
+                    w-full h-full ${cell.tile.isNew ? 'ring-2 ring-[#9b87f5] animate-pulse' : ''}`}>
+                    <div className="flex flex-col items-center justify-center w-full h-full">
+                      <span className="text-3xl font-bold text-[#1A1F2C] leading-none">
+                        {cell.tile.letter || '?'}
                       </span>
-                    )}
+                      {cell.tile.letter && (
+                        <span className="text-xs font-bold text-[#1A1F2C] absolute bottom-1 right-1">
+                          {cell.tile.value}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
