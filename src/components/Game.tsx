@@ -478,14 +478,17 @@ const Game: React.FC = () => {
     setWordHistory(prev => [...prev, newWord]);
     
     if (gameId && user) {
-      saveGameMove({
-        gameId: gameId,
-        userId: user.id,
-        word: word,
-        score: scoreToAdd,
-        moveType: 'place_tiles',
-        placedTiles: newGameState.placedTiles
-      });
+      const userId = user.id || currentPlayer.id;
+      if (userId && !userId.startsWith('player-')) {
+        saveGameMove({
+          gameId: gameId,
+          userId: userId,
+          word: word,
+          score: scoreToAdd,
+          moveType: 'place_tiles',
+          placedTiles: newGameState.placedTiles
+        });
+      }
     }
     
     const tilesToDraw = 7 - currentPlayer.rack.length;

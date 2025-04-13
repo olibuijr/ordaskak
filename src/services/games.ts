@@ -394,7 +394,7 @@ export const getPlayerRacks = async (gameId, playerIds) => {
 };
 
 // Update the board state in the games collection with proper cancellation handling
-export const updateGameBoardState = async (gameId, gameState) => {
+export const updateGameBoardState = async (gameId: string, gameState: GameState) => {
   try {
     console.log("Updating game board state for game:", gameId);
     
@@ -465,13 +465,18 @@ export const updateGameBoardState = async (gameId, gameState) => {
       return null;
     }
     
+    // Make sure the current player ID is a valid user ID from the database
+    // If it starts with "player-", it's a temporary ID and we shouldn't try to use it as a relation
     const currentPlayerId = currentPlayer.id;
     console.log("Current player ID to be set:", currentPlayerId);
     
-    if (!currentPlayerId || typeof currentPlayerId !== 'string') {
-      console.error("Invalid current player ID:", currentPlayerId);
+    if (!currentPlayerId) {
+      console.error("Invalid current player ID: undefined or null");
       return null;
     }
+    
+    // Check if the ID is a temporary one (like "player-1")
+    const isTemporaryId = typeof currentPlayerId === 'string' && currentPlayerId.startsWith('player-');
     
     const playerRacks = {};
     gameState.players.forEach(player => {
@@ -480,12 +485,17 @@ export const updateGameBoardState = async (gameId, gameState) => {
       }
     });
     
+    // Build data object without the current_player_index if it's a temporary ID
     const data = {
       board_state: JSON.stringify(gameState.board),
-      current_player_index: currentPlayerId,
       tile_bag: JSON.stringify(gameState.tileBag),
       ...playerRacks
     };
+    
+    // Only include current_player_index if it's a valid user ID
+    if (!isTemporaryId) {
+      data.current_player_index = currentPlayerId;
+    }
     
     console.log("Data being sent to update game state:", data);
     
