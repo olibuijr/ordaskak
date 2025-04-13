@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { pb, getCurrentUser } from '@/services/pocketbase';
+import { pb } from '@/services/pocketbase';
+import { getCurrentUser, logout } from '@/services/authentication';
 
 type User = {
   id: string;
@@ -64,8 +65,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   }, []);
 
-  const logout = () => {
-    pb.authStore.clear();
+  const handleLogout = () => {
+    logout();
     setUser(null);
   };
 
@@ -75,7 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         isLoading,
         isAuthenticated: !!user,
-        logout,
+        logout: handleLogout,
         refreshUser,
       }}
     >

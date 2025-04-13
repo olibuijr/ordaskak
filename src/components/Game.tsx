@@ -19,7 +19,8 @@ import {
 import { useToast } from '@/components/ui/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/contexts/AuthContext';
-import { pb, saveGameMove, updateGameBoardState } from '@/services/pocketbase';
+import { pb } from '@/services/pocketbase';
+import { saveGameMove, updateGameBoardState } from '@/services/games';
 import { useLocation } from 'react-router-dom';
 
 const Game: React.FC = () => {

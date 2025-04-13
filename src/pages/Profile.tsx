@@ -10,6 +10,18 @@ import { Link } from "react-router-dom";
 import ProfileForm from "@/components/profile/ProfileForm";
 import ProfileStats from "@/components/profile/ProfileStats";
 
+// Define an interface for Game to fix the type error
+interface Game {
+  id: string;
+  created: string;
+  playerNames?: string[];
+  status?: string;
+  winner?: string;
+  players?: string[];
+  created_by?: string;
+  name?: string;
+}
+
 const Profile = () => {
   const { user, isAuthenticated, refreshUser } = useAuth();
 
@@ -30,24 +42,36 @@ const Profile = () => {
       
       try {
         // Fix the filter parameter - using created_by instead of userId and removing isActive filter
-        const games = await pb.collection('games').getList(1, 20, {
+        const gamesResult = await pb.collection('games').getList(1, 20, {
           filter: `created_by = "${user.id}" || players ~ "${user.id}"`,
           sort: '-created'
         });
 
+        // Convert RecordModel[] to Game[]
+        const games: Game[] = gamesResult.items.map(game => ({
+          id: game.id,
+          created: game.created,
+          playerNames: game.playerNames,
+          status: game.status,
+          winner: game.winner,
+          players: game.players,
+          created_by: game.created_by,
+          name: game.name
+        }));
+
         let wins = 0;
-        games.items.forEach(game => {
+        games.forEach(game => {
           if (game.winner === user.name || game.winner === user.username) {
             wins++;
           }
         });
 
-        const winRatio = games.totalItems > 0 ? (wins / games.totalItems) * 100 : 0;
+        const winRatio = games.length > 0 ? (wins / games.length) * 100 : 0;
 
         return {
-          games: games.items,
+          games,
           winRatio: Math.round(winRatio),
-          totalGames: games.totalItems,
+          totalGames: gamesResult.totalItems,
           wins: wins
         };
       } catch (error) {
