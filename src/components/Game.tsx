@@ -216,10 +216,29 @@ const Game: React.FC = () => {
           if (gameMovesHistory && gameMovesHistory.length > 0) {
             setWordHistory(gameMovesHistory);
             
+            console.log("Reconstructing board state from game moves:", gameMovesHistory);
+            
             gameMovesHistory.forEach(move => {
               const playerIndex = updatedGameState.players.findIndex(p => p.id === move.playerId);
               if (playerIndex !== -1) {
                 updatedGameState.players[playerIndex].score += (move.score || 0);
+              }
+              
+              if (move.moveType === 'place_tiles' && move.placedTiles && move.placedTiles.length > 0) {
+                console.log(`Applying move: ${move.word} with tiles:`, move.placedTiles);
+                
+                move.placedTiles.forEach(placedTile => {
+                  if (typeof placedTile.x === 'number' && 
+                      typeof placedTile.y === 'number' && 
+                      placedTile.x >= 0 && placedTile.x < 15 && 
+                      placedTile.y >= 0 && placedTile.y < 15) {
+                    
+                    updatedGameState.board[placedTile.y][placedTile.x].tile = {
+                      ...placedTile,
+                      isNew: false
+                    };
+                  }
+                });
               }
             });
           }
@@ -228,7 +247,6 @@ const Game: React.FC = () => {
         }
         
         setRackDataLoaded(true);
-        
         setGameState(updatedGameState);
         
         if (needUpdate) {

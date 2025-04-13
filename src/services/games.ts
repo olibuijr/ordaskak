@@ -201,7 +201,7 @@ export const fetchGameMoves = async (gameId) => {
     
     console.log("Fetching moves for game:", gameId);
     
-    const records = await pb.collection('gamemoves').getList(1, 50, {
+    const records = await pb.collection('gamemoves').getList(1, 100, {
       filter: `game = "${gameId}"`,
       sort: 'created',
       expand: 'player',
@@ -213,16 +213,29 @@ export const fetchGameMoves = async (gameId) => {
     
     console.log("Fetched game moves:", records.items);
     
-    return records.items.map(move => ({
-      id: move.id,
-      player: move.expand?.player ? (move.expand.player.name || move.expand.player.username) : 'Unknown',
-      playerId: move.player,
-      word: move.word_played || '',
-      score: move.score_gained || 0,
-      moveType: move.move_type,
-      created: move.created,
-      placedTiles: move.tiles_placed ? JSON.parse(move.tiles_placed) : []
-    }));
+    return records.items.map(move => {
+      let parsedTiles = [];
+      
+      try {
+        if (move.tiles_placed && typeof move.tiles_placed === 'string') {
+          parsedTiles = JSON.parse(move.tiles_placed);
+          console.log(`Parsed tiles for move ${move.id}:`, parsedTiles);
+        }
+      } catch (error) {
+        console.error(`Error parsing tiles for move ${move.id}:`, error);
+      }
+      
+      return {
+        id: move.id,
+        player: move.expand?.player ? (move.expand.player.name || move.expand.player.username) : 'Unknown',
+        playerId: move.player,
+        word: move.word_played || '',
+        score: move.score_gained || 0,
+        moveType: move.move_type,
+        created: move.created,
+        placedTiles: parsedTiles
+      };
+    });
   } catch (error) {
     if (error.name === 'AbortError') {
       console.log("Request to fetch game moves was cancelled, a newer request takes precedence");
