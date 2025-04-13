@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import GameBoard from './GameBoard';
 import PlayerRack from './PlayerRack';
 import ScoreBoard from './ScoreBoard';
@@ -30,6 +30,31 @@ import {
 import { getUserById } from '@/services/users';
 import { useLocation } from 'react-router-dom';
 
+// Debounce function to prevent too many updates
+const useDebounce = (callback, delay) => {
+  const timeoutRef = React.useRef(null);
+  
+  const debouncedCallback = useCallback((...args) => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
+    timeoutRef.current = setTimeout(() => {
+      callback(...args);
+    }, delay);
+  }, [callback, delay]);
+  
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+  
+  return debouncedCallback;
+};
+
 const Game: React.FC = () => {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [selectedTile, setSelectedTile] = useState<Tile | null>(null);
@@ -42,6 +67,7 @@ const Game: React.FC = () => {
   const [gameId, setGameId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);
+  const [updateQueued, setUpdateQueued] = useState<boolean>(false);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -206,8 +232,7 @@ const Game: React.FC = () => {
         
         if (needUpdate) {
           console.log("Updating game state because some players needed new tiles");
-          updateGameBoardState(id, updatedGameState);
-          updatePlayerRacks(id, updatedGameState.players, updatedGameState.tileBag);
+          saveGameState(id, updatedGameState);
         }
       } else {
         toast({
@@ -229,19 +254,31 @@ const Game: React.FC = () => {
     }
   };
 
-  // Immediately save game state changes to the database
+  // Combined function to save both board state and player racks at once
+  const saveGameState = async (id: string, state: GameState) => {
+    if (!id || !state) return;
+    
+    // First update the board state
+    await updateGameBoardState(id, state);
+    
+    // Then ensure player racks are also saved separately
+    if (state.players && state.tileBag) {
+      await updatePlayerRacks(id, state.players, state.tileBag);
+    }
+  };
+  
+  // Create debounced version of saveGameState
+  const debouncedSaveGameState = useDebounce((id, state) => {
+    saveGameState(id, state);
+    setUpdateQueued(false);
+  }, 500);
+
+  // Debounced save game state changes to the database
   useEffect(() => {
     if (gameState && gameId && !isInitialLoad) {
-      console.log("Game state updated, saving to database:", gameState);
-      
-      // First update the board state
-      updateGameBoardState(gameId, gameState);
-      
-      // Then ensure player racks are also saved separately
-      if (gameState.players && gameState.tileBag) {
-        console.log("Updating player racks after game state change");
-        updatePlayerRacks(gameId, gameState.players, gameState.tileBag);
-      }
+      console.log("Game state updated, queuing save to database");
+      setUpdateQueued(true);
+      debouncedSaveGameState(gameId, gameState);
     }
   }, [gameState, gameId, isInitialLoad]);
   
@@ -261,7 +298,7 @@ const Game: React.FC = () => {
     if (newGameId) {
       setGameId(newGameId);
       if (newGameState.players && newGameState.players.length > 0) {
-        updateGameBoardState(newGameId, newGameState);
+        saveGameState(newGameId, newGameState);
       }
     }
     
@@ -495,6 +532,7 @@ const Game: React.FC = () => {
     
     setGameState(newGameState);
     
+    // Save the rack directly after shuffling to ensure it's saved
     updatePlayerRacks(gameId, newGameState.players, newGameState.tileBag);
     
     toast({
@@ -631,6 +669,11 @@ const Game: React.FC = () => {
   
   return (
     <div className="container mx-auto px-4 py-6 flex flex-col gap-6 min-h-screen">
+      {updateQueued && (
+        <div className="bg-amber-800/20 text-amber-200 p-2 rounded-md text-sm text-center">
+          Vista breytingar...
+        </div>
+      )}
       <div className="flex flex-col lg:flex-row gap-6">
         <div className="lg:w-3/4 flex flex-col">
           <h2 className="text-2xl font-bold mb-3 text-game-accent-blue">

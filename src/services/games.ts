@@ -1,5 +1,17 @@
+
 import { pb } from './pocketbase';
 import { getCurrentUser } from './authentication';
+
+// Create a map of active request signal controllers
+const activeRequests = new Map();
+
+// Helper to cancel previous request with the same key
+const cancelPreviousRequest = (requestKey) => {
+  if (activeRequests.has(requestKey)) {
+    activeRequests.get(requestKey).abort();
+    activeRequests.delete(requestKey);
+  }
+};
 
 // User game-related functions
 export const fetchUserGames = async (userId) => {
@@ -179,7 +191,7 @@ export const fetchGameById = async (gameId) => {
   }
 };
 
-// Save the player racks and tile bag state to maintain consistency
+// Save the player racks and tile bag state to maintain consistency with proper cancellation handling
 export const updatePlayerRacks = async (gameId, players, tileBag) => {
   try {
     if (!gameId) {
@@ -190,6 +202,14 @@ export const updatePlayerRacks = async (gameId, players, tileBag) => {
     console.log("Updating player racks for game:", gameId);
     console.log("Players data:", players);
     
+    // Cancel any previous update for this game
+    const requestKey = `update_racks_${gameId}`;
+    cancelPreviousRequest(requestKey);
+    
+    // Create a new abort controller for this request
+    const controller = new AbortController();
+    activeRequests.set(requestKey, controller);
+
     const playerRacks = {};
     players.forEach((player, index) => {
       if (player && player.id && player.rack) {
@@ -207,10 +227,21 @@ export const updatePlayerRacks = async (gameId, players, tileBag) => {
     
     console.log("Data being sent to update racks:", data);
     
-    const record = await pb.collection('games').update(gameId, data);
+    const record = await pb.collection('games').update(gameId, data, {
+      signal: controller.signal
+    });
+    
+    // Clean up the controller after request is complete
+    activeRequests.delete(requestKey);
+    
     console.log("Player racks and tile bag updated successfully:", record);
     return record;
   } catch (error) {
+    if (error.name === 'AbortError') {
+      console.log("Request to update player racks was cancelled, a newer request takes precedence");
+      return null;
+    }
+    
     console.error("Error updating player racks:", error);
     console.error("Error details:", error.response?.data);
     return null;
@@ -253,7 +284,7 @@ export const getPlayerRacks = async (gameId, playerIds) => {
   }
 };
 
-// Update the board state in the games collection
+// Update the board state in the games collection with proper cancellation handling
 export const updateGameBoardState = async (gameId, gameState) => {
   try {
     console.log("Updating game board state for game:", gameId);
@@ -262,6 +293,14 @@ export const updateGameBoardState = async (gameId, gameState) => {
       console.error("Invalid game state:", gameState);
       return null;
     }
+    
+    // Cancel any previous update for this game
+    const requestKey = `update_board_${gameId}`;
+    cancelPreviousRequest(requestKey);
+    
+    // Create a new abort controller for this request
+    const controller = new AbortController();
+    activeRequests.set(requestKey, controller);
     
     if (!gameState.players || gameState.players.length === 0) {
       try {
@@ -342,10 +381,21 @@ export const updateGameBoardState = async (gameId, gameState) => {
     console.log("Data being sent to update game state:", data);
     
     try {
-      const record = await pb.collection('games').update(gameId, data);
+      const record = await pb.collection('games').update(gameId, data, {
+        signal: controller.signal
+      });
+      
+      // Clean up the controller after request is complete
+      activeRequests.delete(requestKey);
+      
       console.log("Game board state updated successfully:", record);
       return record;
     } catch (error) {
+      if (error.name === 'AbortError') {
+        console.log("Request to update game board state was cancelled, a newer request takes precedence");
+        return null;
+      }
+      
       console.error('Error updating game board state:', error);
       console.error('Error details:', error.response?.data);
       return null;
