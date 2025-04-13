@@ -1,4 +1,3 @@
-
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Table,
@@ -10,6 +9,8 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Play, Check } from "lucide-react";
+import { useEffect, useState } from "react";
+import { getUserById } from "@/services/users";
 
 interface GameData {
   id: string;
@@ -37,13 +38,55 @@ const GamesList = ({
   currentUserName,
   formatDate 
 }: GamesListProps) => {
+  const [playerNameCache, setPlayerNameCache] = useState<Record<string, string>>({});
   
-  // Helper function to format player names
+  useEffect(() => {
+    const fetchPlayerNames = async () => {
+      const playerIds = new Set<string>();
+      
+      [...activeGames, ...completedGames].forEach(game => {
+        if (game.players && Array.isArray(game.players)) {
+          game.players.forEach(playerId => {
+            if (typeof playerId === 'string' && !playerNameCache[playerId]) {
+              playerIds.add(playerId);
+            }
+          });
+        }
+      });
+      
+      const newPlayerNames: Record<string, string> = {};
+      for (const playerId of playerIds) {
+        try {
+          const user = await getUserById(playerId);
+          if (user) {
+            newPlayerNames[playerId] = user.name || user.username;
+          } else {
+            newPlayerNames[playerId] = 'Unknown Player';
+          }
+        } catch (error) {
+          console.error(`Error fetching player name for ID ${playerId}:`, error);
+          newPlayerNames[playerId] = 'Unknown Player';
+        }
+      }
+      
+      setPlayerNameCache(prev => ({ ...prev, ...newPlayerNames }));
+    };
+    
+    fetchPlayerNames();
+  }, [activeGames, completedGames]);
+  
   const formatPlayersList = (players: string[]) => {
     if (!players || players.length === 0) {
       return "No players";
     }
-    return players.join(', ');
+    
+    return players.map(playerId => {
+      if (playerId.length > 36 || !playerId.includes('-')) {
+        return playerId;
+      }
+      
+      return playerNameCache[playerId] || 'Loading...';
+    }).join(', ');
   };
   
   return (
@@ -72,11 +115,16 @@ const GamesList = ({
                       <Button 
                         variant="outline" 
                         size="sm"
-                        onClick={() => onStartGame(
-                          game.players.length,
-                          game.players,
-                          game.id
-                        )}
+                        onClick={() => {
+                          const playerNames = game.players.map(playerId => 
+                            playerNameCache[playerId] || 'Unknown Player'
+                          );
+                          onStartGame(
+                            game.players.length,
+                            playerNames,
+                            game.id
+                          );
+                        }}
                         className="border-game-accent-blue/50 text-game-accent-blue hover:bg-game-accent-blue/20"
                       >
                         <Play className="mr-2 h-4 w-4" />

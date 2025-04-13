@@ -38,9 +38,13 @@ const Game: React.FC = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const id = params.get('id');
-    if (id) {
-      setGameId(id);
-      fetchExistingGame(id);
+    const pathGameId = location.pathname.split('/').pop();
+    
+    const gameIdToUse = pathGameId && pathGameId !== 'game' ? pathGameId : id;
+    
+    if (gameIdToUse) {
+      setGameId(gameIdToUse);
+      fetchExistingGame(gameIdToUse);
     } else {
       setIsInitialLoad(false);
     }
@@ -55,7 +59,6 @@ const Game: React.FC = () => {
       if (record) {
         console.log("Fetched game record:", record);
         
-        // Get player IDs from the database (ensure it's an array)
         const playerIds = Array.isArray(record.players) ? record.players : [];
         const playerNames = Array.isArray(record.playerNames) ? record.playerNames : [];
         
@@ -74,26 +77,40 @@ const Game: React.FC = () => {
         console.log("Player IDs from database:", playerIds);
         console.log("Player names from database:", playerNames);
         
-        // Create player objects with the correct database IDs
-        const playersArray = playerIds.map((playerId, index) => ({
-          id: playerId, // Use the real database ID
-          name: playerNames[index] || `Player ${index + 1}`,
-          score: 0,
-          rack: [],
-          isAI: false,
-          isActive: false // Will set the active player below
-        }));
+        const playersArray = [];
         
-        // Get current player index from the database
+        for (let i = 0; i < playerIds.length; i++) {
+          const playerId = playerIds[i];
+          let playerName = '';
+          
+          if (playerNames && playerNames[i]) {
+            playerName = playerNames[i];
+          } else {
+            try {
+              const userRecord = await getUserById(playerId);
+              playerName = userRecord ? (userRecord.name || userRecord.username) : `Player ${i + 1}`;
+            } catch (error) {
+              console.error(`Error fetching name for player ${playerId}:`, error);
+              playerName = `Player ${i + 1}`;
+            }
+          }
+          
+          playersArray.push({
+            id: playerId,
+            name: playerName,
+            score: 0,
+            rack: [],
+            isAI: false,
+            isActive: false
+          });
+        }
+        
         let currentPlayerIndex = 0;
         if (record.current_player_index) {
-          // Find the index of the current player in our players array
           currentPlayerIndex = playersArray.findIndex(player => player.id === record.current_player_index);
-          // If not found, default to the first player
           if (currentPlayerIndex === -1) currentPlayerIndex = 0;
         }
         
-        // Set the active player
         playersArray.forEach((player, index) => {
           player.isActive = index === currentPlayerIndex;
         });
@@ -101,7 +118,6 @@ const Game: React.FC = () => {
         console.log("Current player index:", currentPlayerIndex);
         console.log("Players array:", playersArray);
         
-        // Ensure we have a valid board state
         let boardState;
         try {
           boardState = record.board_state ? JSON.parse(record.board_state) : initializeGame(2).board;
@@ -110,7 +126,6 @@ const Game: React.FC = () => {
           boardState = initializeGame(2).board;
         }
         
-        // Ensure we have a valid tile bag
         let tileBagState;
         try {
           tileBagState = record.tile_bag ? JSON.parse(record.tile_bag) : createTileBag();
@@ -119,7 +134,6 @@ const Game: React.FC = () => {
           tileBagState = createTileBag();
         }
         
-        // Create the game state
         const loadedGameState: GameState = {
           board: boardState,
           players: playersArray,
@@ -132,11 +146,9 @@ const Game: React.FC = () => {
         
         console.log("Loaded game state:", loadedGameState);
         
-        // Check if we need to deal tiles to players
         const updatedGameState = { ...loadedGameState };
         let needUpdate = false;
         
-        // Deal tiles to players if their racks are empty
         for (let i = 0; i < updatedGameState.players.length; i++) {
           if (!updatedGameState.players[i].rack || updatedGameState.players[i].rack.length === 0) {
             const { drawn, remaining } = drawTiles(updatedGameState.tileBag, 7);
@@ -146,7 +158,6 @@ const Game: React.FC = () => {
           }
         }
         
-        // Fetch game moves to build word history
         try {
           const movesRecords = await pb.collection('gamemoves').getList(1, 50, {
             filter: `game = "${id}"`,
@@ -162,7 +173,6 @@ const Game: React.FC = () => {
             
             setWordHistory(history);
             
-            // Update player scores from moves
             movesRecords.items.forEach(move => {
               const playerIndex = updatedGameState.players.findIndex(p => p.id === move.user);
               if (playerIndex !== -1) {
@@ -174,10 +184,8 @@ const Game: React.FC = () => {
           console.error("Error fetching game moves:", error);
         }
         
-        // Set the game state
         setGameState(updatedGameState);
         
-        // If we needed to update (e.g., deal tiles), save the changes
         if (needUpdate) {
           updateGameBoardState(id, updatedGameState);
         }
@@ -212,9 +220,7 @@ const Game: React.FC = () => {
     console.log("Starting game with", playerCount, "players");
     const newGameState = initializeGame(playerCount, playerNames);
     
-    // Make sure we have valid players with appropriate structure
     if (newGameState.players && newGameState.players.length > 0) {
-      // Only set the first player's ID to the current user if the user is logged in
       if (user && newGameState.players[0]) {
         newGameState.players[0].id = user.id;
       }
@@ -225,7 +231,6 @@ const Game: React.FC = () => {
     
     if (newGameId) {
       setGameId(newGameId);
-      // Only update game board state if we have valid players
       if (newGameState.players && newGameState.players.length > 0) {
         updateGameBoardState(newGameId, newGameState);
       }
