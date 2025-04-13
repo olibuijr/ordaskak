@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import GameBoard from './GameBoard';
 import PlayerRack from './PlayerRack';
@@ -50,17 +51,28 @@ const Game: React.FC = () => {
       if (record) {
         console.log("Fetched game:", record);
         
-        const loadedGameState: GameState = {
-          board: record.board_state ? JSON.parse(record.board_state) : initializeGame(2).board,
-          players: record.players ? record.players.map((playerId, index) => ({
+        // Convert player string IDs to player objects
+        const playersArray = record.players ? 
+          record.players.map((playerId, index) => ({
             id: playerId,
-            name: record.playerNames[index] || `Player ${index + 1}`,
+            name: record.playerNames && record.playerNames[index] ? record.playerNames[index] : `Player ${index + 1}`,
             score: 0,
             rack: [],
             isAI: false,
+            // Mark the current player as active
             isActive: playerId === record.current_player_index
-          })) : [],
-          currentPlayerIndex: record.players ? record.players.findIndex(id => id === record.current_player_index) : 0,
+          })) : [];
+        
+        // Find the index of the current player in the players array
+        const currentPlayerIndex = playersArray.findIndex(player => player.id === record.current_player_index);
+        
+        console.log("Current player index:", currentPlayerIndex);
+        console.log("Players array:", playersArray);
+        
+        const loadedGameState: GameState = {
+          board: record.board_state ? JSON.parse(record.board_state) : initializeGame(2).board,
+          players: playersArray,
+          currentPlayerIndex: currentPlayerIndex !== -1 ? currentPlayerIndex : 0,
           tileBag: record.tile_bag ? JSON.parse(record.tile_bag) : createTileBag(),
           isGameOver: record.status !== 'in_progress',
           winner: null,

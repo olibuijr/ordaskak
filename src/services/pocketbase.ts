@@ -184,10 +184,14 @@ export const updateGameBoardState = async (gameId, gameState) => {
   try {
     console.log("Updating game board state for game:", gameId);
     
+    // Get the current player's ID (not the index)
+    const currentPlayerId = gameState.players[gameState.currentPlayerIndex].id;
+    console.log("Current player ID to be set:", currentPlayerId);
+    
     const data = {
       board_state: JSON.stringify(gameState.board),
-      current_player_index: gameState.players[gameState.currentPlayerIndex].id,
-      tile_bag: JSON.stringify(gameState.tileBag) // Add tile_bag to the update
+      current_player_index: currentPlayerId, // Set the ID not the index
+      tile_bag: JSON.stringify(gameState.tileBag)
     };
     
     const record = await pb.collection('games').update(gameId, data);
@@ -198,4 +202,3 @@ export const updateGameBoardState = async (gameId, gameState) => {
     throw error;
   }
 };
-
