@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   GameState, 
   Tile, 
@@ -32,10 +32,10 @@ export type WordHistoryEntry = {
 };
 
 // Debounce utility
-const useDebounce = (callback, delay) => {
-  const timeoutRef = React.useRef(null);
+const useDebounce = (callback: (...args: any[]) => void, delay: number) => {
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  const debouncedCallback = useCallback((...args) => {
+  const debouncedCallback = useCallback((...args: any[]) => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
