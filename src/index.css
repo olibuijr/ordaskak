@@ -53,17 +53,21 @@
 }
 
 .letter-tile {
-  @apply flex items-center justify-center text-xl font-bold bg-game-light border border-game-accent-blue rounded-md overflow-hidden relative;
-  box-shadow: 0 0 10px rgba(100, 255, 218, 0.5);
+  @apply flex items-center justify-center text-xl font-bold relative;
+  background: linear-gradient(135deg, #e2c088 0%, #dab285 100%);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  border: 1px solid #c19c65;
 }
 
 .letter-tile::before {
   content: '';
-  @apply absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-game-accent-blue opacity-20;
+  @apply absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black opacity-10;
+  border-radius: 4px;
 }
 
 .letter-tile-value {
-  @apply absolute bottom-1 right-1 text-xs font-bold text-game-accent-blue;
+  @apply absolute bottom-1 right-1 text-xs font-bold text-black/70;
 }
 
 .bonus-dw {
@@ -95,4 +99,20 @@
 
 .rack-tile:hover {
   transform: translateY(-10px);
+}
+
+.glow-effect {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 5px rgba(100, 255, 218, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(100, 255, 218, 0.7);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(100, 255, 218, 0.3);
+  }
 }

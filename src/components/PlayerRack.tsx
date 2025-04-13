@@ -21,7 +21,7 @@ const TileComponent: React.FC<{
     }`}
     onClick={onClick}
   >
-    <span className="text-2xl">{tile.letter || '?'}</span>
+    <span className="text-2xl font-bold">{tile.letter || '?'}</span>
     {tile.letter && <span className="letter-tile-value">{tile.value}</span>}
   </div>
 );
@@ -34,7 +34,7 @@ const PlayerRack: React.FC<PlayerRackProps> = ({
 }) => {
   return (
     <div className={`player-rack rounded-lg flex flex-wrap justify-center items-center
-      ${isCurrentPlayer ? 'bg-opacity-80' : 'bg-opacity-40 opacity-60'}`}
+      ${isCurrentPlayer ? 'bg-opacity-80 glow-effect' : 'bg-opacity-40 opacity-60'}`}
     >
       {tiles.map((tile) => (
         <ReactCardFlip 
@@ -44,7 +44,7 @@ const PlayerRack: React.FC<PlayerRackProps> = ({
         >
           {/* Hidden back side */}
           <div className="w-14 h-14 md:w-16 md:h-16 m-1 bg-game-light rounded-md
-            flex items-center justify-center text-center">
+            flex items-center justify-center text-center shadow-md border border-game-accent-blue/20">
             <span className="text-game-accent-blue">Orðaskák</span>
           </div>
           
