@@ -1,5 +1,6 @@
 import { pb } from './pocketbase';
 import { getCurrentUser } from './authentication';
+import { GameState } from '@/utils/gameLogic';
 
 // Create a map of active request signal controllers
 const activeRequests = new Map();
@@ -411,6 +412,7 @@ export const updateGameBoardState = async (gameId: string, gameState: GameState)
     const controller = new AbortController();
     activeRequests.set(requestKey, controller);
     
+    // Handling empty players array
     if (!gameState.players || gameState.players.length === 0) {
       try {
         console.log("Empty players array, fetching game details");
@@ -485,8 +487,13 @@ export const updateGameBoardState = async (gameId: string, gameState: GameState)
       }
     });
     
-    // Build data object without the current_player_index if it's a temporary ID
-    const data = {
+    // Define the data object with its type explicitly
+    const data: {
+      board_state: string;
+      tile_bag: string;
+      current_player_index?: string;
+      [key: string]: any;
+    } = {
       board_state: JSON.stringify(gameState.board),
       tile_bag: JSON.stringify(gameState.tileBag),
       ...playerRacks
