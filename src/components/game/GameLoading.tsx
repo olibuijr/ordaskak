@@ -14,7 +14,8 @@ const GameLoading: React.FC<GameLoadingProps> = ({
         <h2 className="text-2xl font-bold mb-3 text-game-accent-blue">
           {message}
         </h2>
-        <p>Vinsamlegast bíddu á meðan leikurinn er sóttur.</p>
+        <p className="mb-4">Vinsamlegast bíddu á meðan leikurinn er sóttur.</p>
+        <div className="w-12 h-12 border-4 border-game-accent-blue border-t-transparent rounded-full animate-spin mx-auto"></div>
       </div>
     </div>
   );

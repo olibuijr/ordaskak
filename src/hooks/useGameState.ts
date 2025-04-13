@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   GameState, 
@@ -31,7 +30,6 @@ export type WordHistoryEntry = {
   created?: string;
 };
 
-// Debounce utility
 const useDebounce = (callback: (...args: any[]) => void, delay: number) => {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -68,8 +66,9 @@ export const useGameState = (initialGameId: string | null) => {
   const [rackDataLoaded, setRackDataLoaded] = useState<boolean>(false);
   const { toast } = useToast();
   const { user } = useAuth();
+  const fetchAttempts = useRef(0);
+  const maxFetchAttempts = 3;
 
-  // Save game state to database
   const saveGameState = async (id: string, state: GameState) => {
     if (!id || !state) return;
     
@@ -93,11 +92,18 @@ export const useGameState = (initialGameId: string | null) => {
     }
   }, [gameState, gameId, isInitialLoad, rackDataLoaded]);
 
-  // Fetch existing game from the database
   const fetchExistingGame = async (id: string) => {
     try {
+      if (!id) {
+        console.error("Cannot fetch game: No game ID provided");
+        setIsLoading(false);
+        setIsInitialLoad(false);
+        return;
+      }
+
       setIsLoading(true);
-      console.log("Fetching game with ID:", id);
+      console.log(`Fetching game with ID: ${id} (Attempt ${fetchAttempts.current + 1}/${maxFetchAttempts})`);
+      
       const record = await fetchGameById(id);
       
       if (record) {
@@ -139,144 +145,163 @@ export const useGameState = (initialGameId: string | null) => {
           tileBagState = createTileBag();
         }
         
-        const playerRacks = await getPlayerRacks(id, playerIds);
-        console.log("Retrieved player racks from database:", playerRacks);
-        
-        const playersArray = [];
-        
-        for (let i = 0; i < playerIds.length; i++) {
-          const playerId = playerIds[i];
-          let playerName = '';
+        try {
+          const playerRacks = await getPlayerRacks(id, playerIds);
+          console.log("Retrieved player racks from database:", playerRacks);
           
-          if (playerNames && playerNames[i]) {
-            playerName = playerNames[i];
-          } else {
-            try {
-              const userRecord = await getUserById(playerId);
-              playerName = userRecord ? (userRecord.name || userRecord.username) : `Player ${i + 1}`;
-            } catch (error) {
-              console.error(`Error fetching name for player ${playerId}:`, error);
-              playerName = `Player ${i + 1}`;
+          const playersArray = [];
+          
+          for (let i = 0; i < playerIds.length; i++) {
+            const playerId = playerIds[i];
+            let playerName = '';
+            
+            if (playerNames && playerNames[i]) {
+              playerName = playerNames[i];
+            } else {
+              try {
+                const userRecord = await getUserById(playerId);
+                playerName = userRecord ? (userRecord.name || userRecord.username) : `Player ${i + 1}`;
+              } catch (error) {
+                console.error(`Error fetching name for player ${playerId}:`, error);
+                playerName = `Player ${i + 1}`;
+              }
+            }
+            
+            const playerRack = playerRacks && playerRacks[playerId] ? playerRacks[playerId] : [];
+            console.log(`Rack for player ${playerId}:`, playerRack);
+            
+            playersArray.push({
+              id: playerId,
+              name: playerName,
+              score: 0,
+              rack: playerRack,
+              isAI: false,
+              isActive: false
+            });
+          }
+          
+          let currentPlayerIndex = 0;
+          if (record.current_player_index) {
+            currentPlayerIndex = playersArray.findIndex(player => player.id === record.current_player_index);
+            if (currentPlayerIndex === -1) currentPlayerIndex = 0;
+          }
+          
+          playersArray.forEach((player, index) => {
+            player.isActive = index === currentPlayerIndex;
+          });
+          
+          console.log("Current player index:", currentPlayerIndex);
+          console.log("Players array with racks:", playersArray);
+          
+          const loadedGameState: GameState = {
+            board: boardState,
+            players: playersArray,
+            currentPlayerIndex: currentPlayerIndex,
+            tileBag: tileBagState,
+            isGameOver: record.status !== 'in_progress',
+            winner: null,
+            placedTiles: []
+          };
+          
+          console.log("Loaded game state:", loadedGameState);
+          
+          const updatedGameState = { ...loadedGameState };
+          let needUpdate = false;
+          
+          for (let i = 0; i < updatedGameState.players.length; i++) {
+            if (!updatedGameState.players[i].rack || updatedGameState.players[i].rack.length === 0) {
+              console.log(`Player ${updatedGameState.players[i].name} needs new tiles`);
+              const { drawn, remaining } = drawTiles(updatedGameState.tileBag, 7);
+              updatedGameState.players[i].rack = drawn;
+              updatedGameState.tileBag = remaining;
+              needUpdate = true;
+            } else {
+              console.log(`Player ${updatedGameState.players[i].name} already has tiles:`, updatedGameState.players[i].rack);
             }
           }
           
-          const playerRack = playerRacks && playerRacks[playerId] ? playerRacks[playerId] : [];
-          console.log(`Rack for player ${playerId}:`, playerRack);
-          
-          playersArray.push({
-            id: playerId,
-            name: playerName,
-            score: 0,
-            rack: playerRack,
-            isAI: false,
-            isActive: false
-          });
-        }
-        
-        let currentPlayerIndex = 0;
-        if (record.current_player_index) {
-          currentPlayerIndex = playersArray.findIndex(player => player.id === record.current_player_index);
-          if (currentPlayerIndex === -1) currentPlayerIndex = 0;
-        }
-        
-        playersArray.forEach((player, index) => {
-          player.isActive = index === currentPlayerIndex;
-        });
-        
-        console.log("Current player index:", currentPlayerIndex);
-        console.log("Players array with racks:", playersArray);
-        
-        const loadedGameState: GameState = {
-          board: boardState,
-          players: playersArray,
-          currentPlayerIndex: currentPlayerIndex,
-          tileBag: tileBagState,
-          isGameOver: record.status !== 'in_progress',
-          winner: null,
-          placedTiles: []
-        };
-        
-        console.log("Loaded game state:", loadedGameState);
-        
-        const updatedGameState = { ...loadedGameState };
-        let needUpdate = false;
-        
-        for (let i = 0; i < updatedGameState.players.length; i++) {
-          if (!updatedGameState.players[i].rack || updatedGameState.players[i].rack.length === 0) {
-            console.log(`Player ${updatedGameState.players[i].name} needs new tiles`);
-            const { drawn, remaining } = drawTiles(updatedGameState.tileBag, 7);
-            updatedGameState.players[i].rack = drawn;
-            updatedGameState.tileBag = remaining;
-            needUpdate = true;
-          } else {
-            console.log(`Player ${updatedGameState.players[i].name} already has tiles:`, updatedGameState.players[i].rack);
-          }
-        }
-        
-        try {
-          const gameMovesHistory = await fetchGameMoves(id);
-          
-          if (gameMovesHistory && gameMovesHistory.length > 0) {
-            setWordHistory(gameMovesHistory);
+          try {
+            const gameMovesHistory = await fetchGameMoves(id);
             
-            console.log("Reconstructing board state from game moves:", gameMovesHistory);
-            
-            gameMovesHistory.forEach(move => {
-              const playerIndex = updatedGameState.players.findIndex(p => p.id === move.playerId);
-              if (playerIndex !== -1) {
-                updatedGameState.players[playerIndex].score += (move.score || 0);
-              }
+            if (gameMovesHistory && gameMovesHistory.length > 0) {
+              setWordHistory(gameMovesHistory);
               
-              if (move.moveType === 'place_tiles' && move.placedTiles && move.placedTiles.length > 0) {
-                console.log(`Applying move: ${move.word} with tiles:`, move.placedTiles);
+              console.log("Reconstructing board state from game moves:", gameMovesHistory);
+              
+              gameMovesHistory.forEach(move => {
+                const playerIndex = updatedGameState.players.findIndex(p => p.id === move.playerId);
+                if (playerIndex !== -1) {
+                  updatedGameState.players[playerIndex].score += (move.score || 0);
+                }
                 
-                move.placedTiles.forEach(placedTile => {
-                  if (typeof placedTile.x === 'number' && 
-                      typeof placedTile.y === 'number' && 
-                      placedTile.x >= 0 && placedTile.x < 15 && 
-                      placedTile.y >= 0 && placedTile.y < 15) {
-                    
-                    updatedGameState.board[placedTile.y][placedTile.x].tile = {
-                      ...placedTile,
-                      isNew: false
-                    };
-                  }
-                });
-              }
-            });
+                if (move.moveType === 'place_tiles' && move.placedTiles && move.placedTiles.length > 0) {
+                  console.log(`Applying move: ${move.word} with tiles:`, move.placedTiles);
+                  
+                  move.placedTiles.forEach(placedTile => {
+                    if (typeof placedTile.x === 'number' && 
+                        typeof placedTile.y === 'number' && 
+                        placedTile.x >= 0 && placedTile.x < 15 && 
+                        placedTile.y >= 0 && placedTile.y < 15) {
+                      
+                      updatedGameState.board[placedTile.y][placedTile.x].tile = {
+                        ...placedTile,
+                        isNew: false
+                      };
+                    }
+                  });
+                }
+              });
+            }
+          } catch (error) {
+            console.error("Error fetching game moves:", error);
           }
-        } catch (error) {
-          console.error("Error fetching game moves:", error);
-        }
-        
-        setRackDataLoaded(true);
-        setGameState(updatedGameState);
-        
-        if (needUpdate) {
-          console.log("Updating game state because some players needed new tiles");
-          saveGameState(id, updatedGameState);
+          
+          setRackDataLoaded(true);
+          setGameState(updatedGameState);
+          fetchAttempts.current = 0;
+          
+          if (needUpdate) {
+            console.log("Updating game state because some players needed new tiles");
+            saveGameState(id, updatedGameState);
+          }
+        } catch (rackError) {
+          console.error("Error processing player racks:", rackError);
+          handleFetchError(id, "Error processing player data");
+          return;
         }
       } else {
-        toast({
-          title: "Villa við að sækja leik",
-          description: "Leikur fannst ekki. Vinsamlegast reyndu aftur.",
-          variant: "destructive",
-        });
+        handleFetchError(id, "Game not found");
+        return;
       }
     } catch (error) {
       console.error("Error fetching game:", error);
-      toast({
-        title: "Villa við að sækja leik",
-        description: "Ekki tókst að sækja leikinn. Vinsamlegast reyndu aftur.",
-        variant: "destructive",
-      });
+      handleFetchError(id, "Failed to fetch game data");
+      return;
     } finally {
       setIsLoading(false);
       setIsInitialLoad(false);
     }
   };
 
-  // Start a new game
+  const handleFetchError = (id: string, errorMessage: string) => {
+    fetchAttempts.current += 1;
+    
+    if (fetchAttempts.current < maxFetchAttempts) {
+      console.log(`Retrying fetch for game ${id} (Attempt ${fetchAttempts.current + 1}/${maxFetchAttempts})`);
+      setTimeout(() => fetchExistingGame(id), 1000); // Retry after 1 second
+    } else {
+      console.error(`Failed to fetch game after ${maxFetchAttempts} attempts`);
+      toast({
+        title: "Villa við að sækja leik",
+        description: errorMessage + ". Vinsamlegast reyndu aftur.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      setIsInitialLoad(false);
+      fetchAttempts.current = 0;
+    }
+  };
+
   const handleStartGame = (playerCount: number, playerNames: string[], newGameId?: string) => {
     console.log("Starting game with", playerCount, "players");
     const newGameState = initializeGame(playerCount, playerNames);
@@ -304,7 +329,6 @@ export const useGameState = (initialGameId: string | null) => {
     });
   };
   
-  // Handle tile click in the player rack
   const handleTileClick = (tile: Tile) => {
     console.log("Tile clicked:", tile);
     if (selectedTile?.id === tile.id) {
@@ -318,7 +342,6 @@ export const useGameState = (initialGameId: string | null) => {
     }
   };
   
-  // Handle clicking on a cell in the game board
   const handleCellClick = (x: number, y: number) => {
     console.log("Cell clicked:", x, y);
     if (!gameState || !selectedTile) {
@@ -373,7 +396,6 @@ export const useGameState = (initialGameId: string | null) => {
     setGameState(newGameState);
   };
   
-  // Handle playing word action
   const handlePlayWord = () => {
     if (!gameState || !gameId) return;
     
@@ -539,7 +561,6 @@ export const useGameState = (initialGameId: string | null) => {
     }
   };
   
-  // Handle shuffling tiles in the player rack
   const handleShuffleTiles = () => {
     if (!gameState || !gameId) return;
     
@@ -580,7 +601,6 @@ export const useGameState = (initialGameId: string | null) => {
     });
   };
   
-  // Handle passing turn
   const handlePassTurn = () => {
     if (!gameState || !gameId) return;
     
@@ -626,7 +646,6 @@ export const useGameState = (initialGameId: string | null) => {
     }
   };
   
-  // Handle recalling tiles from the board
   const handleRecallTiles = () => {
     if (!gameState || !gameId) return;
     

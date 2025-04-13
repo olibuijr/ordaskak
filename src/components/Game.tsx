@@ -39,24 +39,30 @@ const Game: React.FC = () => {
   // Load game data when location changes
   useEffect(() => {
     const gameId = getGameIdFromUrl();
+    console.log("Game component mounted, extracted game ID:", gameId);
     if (gameId) {
       setGameId(gameId);
       fetchExistingGame(gameId);
+    } else {
+      console.log("No game ID found in URL, showing game setup");
     }
   }, [location]);
 
-  // Loading state
+  // Show detailed loading state for debugging
   if (isLoading || isInitialLoad) {
-    return <GameLoading />;
+    console.log("Game is in loading state:", { isLoading, isInitialLoad });
+    return <GameLoading message={`Hleð leik... ${getGameIdFromUrl() || ''}`} />;
   }
 
   // No game state - show game setup
   if (!gameState) {
+    console.log("No game state available, showing game setup");
     return <GameSetup onStartGame={handleStartGame} />;
   }
 
   // Invalid game state - no players
   if (!gameState.players || gameState.players.length === 0) {
+    console.log("Invalid game state: No players found");
     return (
       <GameError
         title="Villa: Engir leikmenn í boði"
@@ -75,6 +81,7 @@ const Game: React.FC = () => {
   
   // Invalid current player
   if (!currentPlayer) {
+    console.log("Invalid game state: Current player not found");
     return (
       <GameError
         title="Villa: Leikmaður finnst ekki"
@@ -84,6 +91,7 @@ const Game: React.FC = () => {
     );
   }
   
+  console.log("Game loaded successfully, showing game layout");
   // Render the game
   return (
     <GameLayout
