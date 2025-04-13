@@ -65,12 +65,12 @@ export const createNewGame = async (data) => {
     const gameData = {
       name: data.name || `Game ${new Date().toLocaleString('is-IS')}`,
       created_by: data.userId,
-      current_player_index: 0,
-      status: 'in_progress',
+      current_player_index: "0", // Convert to string as the API might expect
+      status: "in_progress",
       // Store player names directly in a simple format the API can accept
       playerNames: data.players,
-      // This is the format the API expects for the players field
-      players: data.players,
+      // Leave the players field empty as it might be a relation field that needs special handling
+      // or handle it differently based on the API requirements
       isActive: true,
       userId: data.userId
     };
