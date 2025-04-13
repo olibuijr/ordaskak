@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import GameBoard from './GameBoard';
 import PlayerRack from './PlayerRack';
@@ -20,6 +21,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/contexts/AuthContext';
 import { pb } from '@/services/pocketbase';
 import { saveGameMove, updateGameBoardState, fetchGameById } from '@/services/games';
+import { getUserById } from '@/services/users';
 import { useLocation } from 'react-router-dom';
 
 const Game: React.FC = () => {
