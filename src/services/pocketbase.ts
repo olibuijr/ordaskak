@@ -1,5 +1,6 @@
 
 import PocketBase from 'pocketbase';
+import { GameState } from '@/utils/gameLogic';
 
 // Create a single PocketBase instance for the entire app
 export const pb = new PocketBase('https://ordaskak.olibuijr.com/api/');
@@ -109,7 +110,8 @@ export const createNewGame = async (data) => {
       // The players field must be a valid relation to user IDs
       players: playerIds, // Include both the current user and selected players
       isActive: true,
-      userId: currentUser.id
+      userId: currentUser.id,
+      board_state: JSON.stringify(initializeGameBoard())
     };
     
     console.log("Sending formatted game data:", gameData);
@@ -128,6 +130,66 @@ export const createNewGame = async (data) => {
     }
   } catch (error) {
     console.error('Error creating game:', error);
+    throw error;
+  }
+};
+
+// Create an empty game board for initialization
+const initializeGameBoard = () => {
+  const board = [];
+  for (let y = 0; y < 15; y++) {
+    board[y] = [];
+    for (let x = 0; x < 15; x++) {
+      let bonus = 'none';
+      board[y][x] = {
+        x,
+        y,
+        bonus,
+        tile: null
+      };
+    }
+  }
+  return board;
+};
+
+// Save a game move to the gamemoves collection
+export const saveGameMove = async (moveData) => {
+  try {
+    console.log("Saving game move:", moveData);
+    
+    const data = {
+      game: moveData.gameId,
+      user: moveData.userId,
+      word: moveData.word,
+      score: moveData.score,
+      board_state: moveData.board_state,
+      player_index: moveData.player_index
+    };
+    
+    const record = await pb.collection('gamemoves').create(data);
+    console.log("Game move saved successfully:", record);
+    return record;
+  } catch (error) {
+    console.error('Error saving game move:', error);
+    throw error;
+  }
+};
+
+// Update the board state in the games collection
+export const updateGameBoardState = async (gameId, gameState) => {
+  try {
+    console.log("Updating game board state for game:", gameId);
+    
+    const data = {
+      board_state: JSON.stringify(gameState.board),
+      current_player_index: gameState.players[gameState.currentPlayerIndex].id
+    };
+    
+    const record = await pb.collection('games').update(gameId, data);
+    console.log("Game board state updated successfully:", record);
+    return record;
+  } catch (error) {
+    console.error('Error updating game board state:', error);
     throw error;
   }
 };

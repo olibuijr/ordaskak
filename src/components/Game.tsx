@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import GameBoard from './GameBoard';
 import PlayerRack from './PlayerRack';
@@ -18,6 +17,8 @@ import {
 import { useToast } from '@/components/ui/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/contexts/AuthContext';
+import { pb, saveGameMove, updateGameBoardState } from '@/services/pocketbase';
+import { useLocation } from 'react-router-dom';
 
 const Game: React.FC = () => {
   const [gameState, setGameState] = useState<GameState | null>(null);
@@ -27,15 +28,32 @@ const Game: React.FC = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { user } = useAuth();
+  const location = useLocation();
+  const [gameId, setGameId] = useState<string | null>(null);
+
+  // Extract gameId from the URL if it exists
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const id = params.get('id');
+    if (id) {
+      setGameId(id);
+      // TODO: Load existing game from PocketBase
+    }
+  }, [location]);
   
   useEffect(() => {
     if (gameState) {
       console.log("Game state updated:", gameState);
+      
+      // If we have a gameId, update the board state in PocketBase
+      if (gameId) {
+        updateGameBoardState(gameId, gameState);
+      }
     }
-  }, [gameState]);
+  }, [gameState, gameId]);
   
   // Make sure we initialize with the correct player ID
-  const handleStartGame = (playerCount: number, playerNames: string[]) => {
+  const handleStartGame = (playerCount: number, playerNames: string[], newGameId?: string) => {
     console.log("Starting game with", playerCount, "players");
     // Make sure the first player ID matches the current user's ID
     const newGameState = initializeGame(playerCount, playerNames);
@@ -47,6 +65,14 @@ const Game: React.FC = () => {
     
     console.log("Initial game state:", newGameState);
     setGameState(newGameState);
+    
+    // Set the gameId if provided
+    if (newGameId) {
+      setGameId(newGameId);
+      // Update the board state in PocketBase
+      updateGameBoardState(newGameId, newGameState);
+    }
+    
     toast({
       title: "Leikur hafinn",
       description: `Nýr leikur hefst með ${playerCount} leikmönnum`,
@@ -216,11 +242,26 @@ const Game: React.FC = () => {
     
     const word = wordLetters.join('');
     
-    setWordHistory(prev => [...prev, {
+    // Add to word history
+    const newWord = {
       word,
       player: currentPlayer.name,
       score: scoreToAdd
-    }]);
+    };
+    
+    setWordHistory(prev => [...prev, newWord]);
+    
+    // Save the move to PocketBase if we have a gameId
+    if (gameId && user) {
+      saveGameMove({
+        gameId: gameId,
+        userId: user.id,
+        word: word,
+        score: scoreToAdd,
+        board_state: JSON.stringify(newGameState.board),
+        player_index: newGameState.currentPlayerIndex
+      });
+    }
     
     const tilesToDraw = 7 - currentPlayer.rack.length;
     if (tilesToDraw > 0 && newGameState.tileBag.length > 0) {
@@ -250,6 +291,11 @@ const Game: React.FC = () => {
     
     setGameState(newGameState);
     setPlacedTilesMap(new Map());
+    
+    // Update the board state in PocketBase
+    if (gameId) {
+      updateGameBoardState(gameId, newGameState);
+    }
   };
   
   const handleShuffleTiles = function() {
