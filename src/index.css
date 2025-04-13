@@ -58,12 +58,22 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   border-radius: 4px;
   border: 1px solid #c19c65;
+  position: relative;
+  overflow: hidden;
 }
 
 .letter-tile::before {
   content: '';
   @apply absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black opacity-10;
   border-radius: 4px;
+}
+
+/* Wood grain effect */
+.letter-tile::after {
+  content: '';
+  @apply absolute inset-0 opacity-10;
+  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h100v100H0z' fill='none'/%3E%3Cpath d='M0 0c20 10 40 10 60 0s40-10 60 0v100c-20-10-40-10-60 0s-40 10-60 0z' fill='%23321'/%3E%3C/svg%3E");
+  background-size: 150px 150px;
 }
 
 .letter-tile-value {
@@ -91,6 +101,17 @@
   background: linear-gradient(180deg, rgba(25, 39, 65, 0.8) 0%, rgba(15, 22, 36, 0.9) 100%);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(10px);
+  /* Make it look like a wooden rack */
+  position: relative;
+  border: 2px solid #c19c65;
+}
+
+.player-rack::before {
+  content: '';
+  @apply absolute inset-0 opacity-5;
+  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h100v100H0z' fill='none'/%3E%3Cpath d='M0 0c20 10 40 10 60 0s40-10 60 0v100c-20-10-40-10-60 0s-40 10-60 0z' fill='%23321'/%3E%3C/svg%3E");
+  background-size: 150px 150px;
+  pointer-events: none;
 }
 
 .rack-tile {

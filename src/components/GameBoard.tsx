@@ -17,7 +17,7 @@ const Cell: React.FC<{
 }> = ({ cell, position, onClick }) => {
   const meshRef = useRef<THREE.Mesh>(null);
   
-  // Determine cell color based on bonus - Scrabble-like colors
+  // Determine cell color based on bonus - Traditional Scrabble colors
   let color = '#e8e4d7'; // default board color (cream/beige like traditional Scrabble)
   let label = '';
   

@@ -33,14 +33,16 @@ const PlayerRack: React.FC<PlayerRackProps> = ({
   selectedTileId 
 }) => {
   return (
-    <div className={`player-rack rounded-lg flex flex-wrap justify-center items-center
-      ${isCurrentPlayer ? 'bg-opacity-80 glow-effect' : 'bg-opacity-40 opacity-60'}`}
+    <div className={`player-rack rounded-lg flex flex-row justify-center items-center
+      ${isCurrentPlayer ? 'bg-opacity-80 glow-effect' : 'bg-opacity-40 opacity-60'} 
+      mx-auto p-4 my-4 max-w-3xl`}
     >
       {tiles.map((tile) => (
         <ReactCardFlip 
           key={tile.id} 
           isFlipped={isCurrentPlayer} 
           flipDirection="horizontal"
+          containerClassName="inline-block"
         >
           {/* Hidden back side */}
           <div className="w-14 h-14 md:w-16 md:h-16 m-1 bg-game-light rounded-md
