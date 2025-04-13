@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/table";
 
 interface GameSetupProps {
-  onStartGame: (playerCount: number, playerNames: string[]) => void;
+  onStartGame: (playerCount: number, playerNames: string[], newGameId?: string) => void;
 }
 
 interface GameData {
@@ -140,7 +140,8 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
         ];
         onStartGame(
           playerNames.length,
-          playerNames
+          playerNames,
+          data.id
         );
       }
       toast({
@@ -362,7 +363,11 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
                                   <Button 
                                     variant="outline" 
                                     size="sm"
-                                    onClick={() => onStartGame(game.players.length, game.players)}
+                                    onClick={() => onStartGame(
+                                      game.players.length,
+                                      game.players,
+                                      game.id
+                                    )}
                                     className="border-game-accent-blue/50 text-game-accent-blue hover:bg-game-accent-blue/20"
                                   >
                                     <Play className="mr-2 h-4 w-4" />

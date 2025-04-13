@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import GameBoard from './GameBoard';
 import PlayerRack from './PlayerRack';
@@ -104,11 +103,14 @@ const Game: React.FC = () => {
   
   const handleStartGame = (playerCount: number, playerNames: string[], newGameId?: string) => {
     console.log("Starting game with", playerCount, "players");
-    const tileBag = createTileBag();
     const newGameState = initializeGame(playerCount, playerNames);
     
-    if (user) {
-      newGameState.players[0].id = user.id;
+    // Make sure we have valid players with appropriate structure
+    if (newGameState.players && newGameState.players.length > 0) {
+      // Only set the first player's ID to the current user if the user is logged in
+      if (user && newGameState.players[0]) {
+        newGameState.players[0].id = user.id;
+      }
     }
     
     console.log("Initial game state:", newGameState);
