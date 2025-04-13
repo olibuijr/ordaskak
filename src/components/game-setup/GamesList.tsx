@@ -1,3 +1,4 @@
+
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Table,
@@ -126,7 +127,7 @@ const GamesList = ({
         return playerNameCache[playerId];
       }
       
-      return isLoading ? "Hleður..." : "Player-" + playerId.substring(0, 5);
+      return isLoading ? "Hleður..." : "Unknown Player";
     }).join(', ');
   };
   
@@ -177,7 +178,7 @@ const GamesList = ({
                             if (!isValidPlayerId(playerId)) {
                               return playerId;
                             }
-                            return playerNameCache[playerId] || `Player-${playerId.substring(0, 5)}`;
+                            return playerNameCache[playerId] || 'Unknown Player';
                           });
                           
                           onStartGame(
