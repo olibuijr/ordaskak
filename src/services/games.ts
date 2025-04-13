@@ -182,6 +182,35 @@ export const fetchGameById = async (gameId) => {
   }
 };
 
+// Save the player racks and tile bag state to maintain consistency
+export const updatePlayerRacks = async (gameId, players, tileBag) => {
+  try {
+    if (!gameId) {
+      console.error("Cannot update player racks: No game ID provided");
+      return null;
+    }
+    
+    // Store the rack data for each player
+    const playerRacks = {};
+    players.forEach((player, index) => {
+      playerRacks[`player_${player.id}_rack`] = JSON.stringify(player.rack);
+    });
+    
+    const data = {
+      ...playerRacks,
+      tile_bag: JSON.stringify(tileBag)
+    };
+    
+    const record = await pb.collection('games').update(gameId, data);
+    console.log("Player racks and tile bag updated successfully:", record);
+    return record;
+  } catch (error) {
+    console.error("Error updating player racks:", error);
+    console.error("Error details:", error.response?.data);
+    return null;
+  }
+};
+
 // Update the board state in the games collection
 export const updateGameBoardState = async (gameId, gameState) => {
   try {
@@ -254,10 +283,17 @@ export const updateGameBoardState = async (gameId, gameState) => {
       return null;
     }
     
+    // Update both the board state and persist player racks
+    const playerRacks = {};
+    gameState.players.forEach(player => {
+      playerRacks[`player_${player.id}_rack`] = JSON.stringify(player.rack);
+    });
+    
     const data = {
       board_state: JSON.stringify(gameState.board),
       current_player_index: currentPlayerId,
-      tile_bag: JSON.stringify(gameState.tileBag)
+      tile_bag: JSON.stringify(gameState.tileBag),
+      ...playerRacks
     };
     
     try {
@@ -271,6 +307,42 @@ export const updateGameBoardState = async (gameId, gameState) => {
     }
   } catch (error) {
     console.error('Error in updateGameBoardState:', error);
+    return null;
+  }
+};
+
+// Retrieve player racks from the database to maintain consistency
+export const getPlayerRacks = async (gameId, playerIds) => {
+  try {
+    if (!gameId || !playerIds || playerIds.length === 0) {
+      console.error("Cannot retrieve player racks: Invalid parameters");
+      return null;
+    }
+    
+    const record = await pb.collection('games').getOne(gameId);
+    if (!record) {
+      console.error("Game record not found when retrieving player racks:", gameId);
+      return null;
+    }
+    
+    const playerRacks = {};
+    playerIds.forEach(playerId => {
+      const rackKey = `player_${playerId}_rack`;
+      if (record[rackKey]) {
+        try {
+          playerRacks[playerId] = JSON.parse(record[rackKey]);
+        } catch (e) {
+          console.error(`Error parsing rack for player ${playerId}:`, e);
+          playerRacks[playerId] = [];
+        }
+      } else {
+        playerRacks[playerId] = [];
+      }
+    });
+    
+    return playerRacks;
+  } catch (error) {
+    console.error("Error retrieving player racks:", error);
     return null;
   }
 };

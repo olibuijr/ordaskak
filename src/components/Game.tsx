@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import GameBoard from './GameBoard';
 import PlayerRack from './PlayerRack';
@@ -20,7 +19,13 @@ import { useToast } from '@/components/ui/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/contexts/AuthContext';
 import { pb } from '@/services/pocketbase';
-import { saveGameMove, updateGameBoardState, fetchGameById } from '@/services/games';
+import { 
+  saveGameMove, 
+  updateGameBoardState, 
+  fetchGameById, 
+  updatePlayerRacks,
+  getPlayerRacks 
+} from '@/services/games';
 import { getUserById } from '@/services/users';
 import { useLocation } from 'react-router-dom';
 
@@ -134,6 +139,17 @@ const Game: React.FC = () => {
         } catch (e) {
           console.error("Error parsing tile bag:", e);
           tileBagState = createTileBag();
+        }
+        
+        const playerRacks = await getPlayerRacks(id, playerIds);
+        
+        if (playerRacks) {
+          playersArray.forEach(player => {
+            if (playerRacks[player.id] && playerRacks[player.id].length > 0) {
+              console.log(`Using saved rack for player ${player.id}:`, playerRacks[player.id]);
+              player.rack = playerRacks[player.id];
+            }
+          });
         }
         
         const loadedGameState: GameState = {
