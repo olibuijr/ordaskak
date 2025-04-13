@@ -89,6 +89,7 @@ export const createNewGame = async (data) => {
     }
     
     // Format data to match the required fields for PocketBase
+    // Making sure current_player_index is explicitly set as a number
     const gameData = {
       name: data.name || `Game ${new Date().toLocaleString('is-IS')}`,
       created_by: currentUser.id,
@@ -105,18 +106,28 @@ export const createNewGame = async (data) => {
     console.log("Sending formatted game data:", gameData);
     
     try {
-      // First attempt with the players array as is
-      const record = await pb.collection('games').create(gameData);
+      // First attempt with the players array and explicitly setting the current_player_index
+      const recordData = {
+        ...gameData,
+        current_player_index: Number(0) // Ensure it's explicitly a number
+      };
+      
+      const record = await pb.collection('games').create(recordData);
       console.log("Game created successfully:", record);
       return record;
     } catch (firstError) {
       console.error('First attempt error:', firstError);
       
-      // If that fails, try without including selectedUsers - include only the currentUser
-      console.log("Retrying with only current user in players array");
-      gameData.players = [currentUser.id];
+      // If that fails, try again with a different approach
+      console.log("Retrying with different format");
+      // Sometimes PocketBase needs the field as a string when sending it
+      const recordData = {
+        ...gameData,
+        current_player_index: "0", // Try as string instead
+        players: [currentUser.id]
+      };
       
-      const record = await pb.collection('games').create(gameData);
+      const record = await pb.collection('games').create(recordData);
       console.log("Game created successfully on second attempt:", record);
       return record;
     }
