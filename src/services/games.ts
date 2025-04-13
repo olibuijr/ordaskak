@@ -173,9 +173,21 @@ export const fetchGameById = async (gameId) => {
       return null;
     }
     
+    // Cancel any previous fetch for this game
+    const requestKey = `fetch_game_${gameId}`;
+    cancelPreviousRequest(requestKey);
+    
+    // Create a new abort controller for this request
+    const controller = new AbortController();
+    activeRequests.set(requestKey, controller);
+    
     const record = await pb.collection('games').getOne(gameId, {
-      expand: 'players'
+      expand: 'players',
+      signal: controller.signal
     });
+    
+    // Clean up the controller after request is complete
+    activeRequests.delete(requestKey);
     
     if (!record) {
       console.error("Game record not found:", gameId);
@@ -186,6 +198,11 @@ export const fetchGameById = async (gameId) => {
     
     return record;
   } catch (error) {
+    if (error.name === 'AbortError') {
+      console.log("Request to fetch game was cancelled, a newer request takes precedence");
+      return null;
+    }
+    
     console.error("Error fetching game by ID:", error);
     return null;
   }
@@ -256,29 +273,53 @@ export const getPlayerRacks = async (gameId, playerIds) => {
       return null;
     }
     
-    const record = await pb.collection('games').getOne(gameId);
+    // Cancel any previous fetch for this game's racks
+    const requestKey = `get_racks_${gameId}`;
+    cancelPreviousRequest(requestKey);
+    
+    // Create a new abort controller for this request
+    const controller = new AbortController();
+    activeRequests.set(requestKey, controller);
+    
+    const record = await pb.collection('games').getOne(gameId, {
+      signal: controller.signal
+    });
+    
+    // Clean up the controller after request is complete
+    activeRequests.delete(requestKey);
+    
     if (!record) {
       console.error("Game record not found when retrieving player racks:", gameId);
       return null;
     }
+    
+    console.log("Retrieved game record for racks:", record);
     
     const playerRacks = {};
     playerIds.forEach(playerId => {
       const rackKey = `player_${playerId}_rack`;
       if (record[rackKey]) {
         try {
+          console.log(`Found rack for player ${playerId}:`, record[rackKey]);
           playerRacks[playerId] = JSON.parse(record[rackKey]);
         } catch (e) {
           console.error(`Error parsing rack for player ${playerId}:`, e);
           playerRacks[playerId] = [];
         }
       } else {
+        console.log(`No rack found for player ${playerId}, using empty array`);
         playerRacks[playerId] = [];
       }
     });
     
+    console.log("Returning player racks:", playerRacks);
     return playerRacks;
   } catch (error) {
+    if (error.name === 'AbortError') {
+      console.log("Request to get player racks was cancelled, a newer request takes precedence");
+      return null;
+    }
+    
     console.error("Error retrieving player racks:", error);
     return null;
   }

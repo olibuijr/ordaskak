@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import GameBoard from './GameBoard';
 import PlayerRack from './PlayerRack';
@@ -30,7 +29,6 @@ import {
 import { getUserById } from '@/services/users';
 import { useLocation } from 'react-router-dom';
 
-// Debounce function to prevent too many updates
 const useDebounce = (callback, delay) => {
   const timeoutRef = React.useRef(null);
   
@@ -68,6 +66,7 @@ const Game: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);
   const [updateQueued, setUpdateQueued] = useState<boolean>(false);
+  const [rackDataLoaded, setRackDataLoaded] = useState<boolean>(false);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -111,6 +110,24 @@ const Game: React.FC = () => {
         console.log("Player IDs from database:", playerIds);
         console.log("Player names from database:", playerNames);
         
+        let boardState;
+        try {
+          boardState = record.board_state ? JSON.parse(record.board_state) : initializeGame(2).board;
+          console.log("Loaded board state from database:", boardState);
+        } catch (e) {
+          console.error("Error parsing board state:", e);
+          boardState = initializeGame(2).board;
+        }
+        
+        let tileBagState;
+        try {
+          tileBagState = record.tile_bag ? JSON.parse(record.tile_bag) : createTileBag();
+          console.log("Loaded tile bag from database:", tileBagState);
+        } catch (e) {
+          console.error("Error parsing tile bag:", e);
+          tileBagState = createTileBag();
+        }
+        
         const playerRacks = await getPlayerRacks(id, playerIds);
         console.log("Retrieved player racks from database:", playerRacks);
         
@@ -133,6 +150,7 @@ const Game: React.FC = () => {
           }
           
           const playerRack = playerRacks && playerRacks[playerId] ? playerRacks[playerId] : [];
+          console.log(`Rack for player ${playerId}:`, playerRack);
           
           playersArray.push({
             id: playerId,
@@ -157,23 +175,6 @@ const Game: React.FC = () => {
         console.log("Current player index:", currentPlayerIndex);
         console.log("Players array with racks:", playersArray);
         
-        let boardState;
-        try {
-          boardState = record.board_state ? JSON.parse(record.board_state) : initializeGame(2).board;
-        } catch (e) {
-          console.error("Error parsing board state:", e);
-          boardState = initializeGame(2).board;
-        }
-        
-        let tileBagState;
-        try {
-          tileBagState = record.tile_bag ? JSON.parse(record.tile_bag) : createTileBag();
-          console.log("Loaded tile bag from database:", tileBagState);
-        } catch (e) {
-          console.error("Error parsing tile bag:", e);
-          tileBagState = createTileBag();
-        }
-        
         const loadedGameState: GameState = {
           board: boardState,
           players: playersArray,
@@ -186,7 +187,6 @@ const Game: React.FC = () => {
         
         console.log("Loaded game state:", loadedGameState);
         
-        // Only draw new tiles if rack is empty - this ensures we don't override saved racks
         const updatedGameState = { ...loadedGameState };
         let needUpdate = false;
         
@@ -228,6 +228,8 @@ const Game: React.FC = () => {
           console.error("Error fetching game moves:", error);
         }
         
+        setRackDataLoaded(true);
+        
         setGameState(updatedGameState);
         
         if (needUpdate) {
@@ -254,33 +256,28 @@ const Game: React.FC = () => {
     }
   };
 
-  // Combined function to save both board state and player racks at once
   const saveGameState = async (id: string, state: GameState) => {
     if (!id || !state) return;
     
-    // First update the board state
     await updateGameBoardState(id, state);
     
-    // Then ensure player racks are also saved separately
     if (state.players && state.tileBag) {
       await updatePlayerRacks(id, state.players, state.tileBag);
     }
   };
   
-  // Create debounced version of saveGameState
   const debouncedSaveGameState = useDebounce((id, state) => {
     saveGameState(id, state);
     setUpdateQueued(false);
   }, 500);
 
-  // Debounced save game state changes to the database
   useEffect(() => {
-    if (gameState && gameId && !isInitialLoad) {
+    if (gameState && gameId && !isInitialLoad && rackDataLoaded) {
       console.log("Game state updated, queuing save to database");
       setUpdateQueued(true);
       debouncedSaveGameState(gameId, gameState);
     }
-  }, [gameState, gameId, isInitialLoad]);
+  }, [gameState, gameId, isInitialLoad, rackDataLoaded]);
   
   const handleStartGame = (playerCount: number, playerNames: string[], newGameId?: string) => {
     console.log("Starting game with", playerCount, "players");
@@ -294,6 +291,7 @@ const Game: React.FC = () => {
     
     console.log("Initial game state:", newGameState);
     setGameState(newGameState);
+    setRackDataLoaded(true);
     
     if (newGameId) {
       setGameId(newGameId);
@@ -519,7 +517,9 @@ const Game: React.FC = () => {
     setGameState(newGameState);
     setPlacedTilesMap(new Map());
     
-    updatePlayerRacks(gameId, newGameState.players, newGameState.tileBag);
+    if (gameId) {
+      updatePlayerRacks(gameId, newGameState.players, newGameState.tileBag);
+    }
   };
   
   const handleShuffleTiles = function() {
@@ -528,12 +528,14 @@ const Game: React.FC = () => {
     const newGameState = { ...gameState };
     const currentPlayer = newGameState.players[newGameState.currentPlayerIndex];
     
-    currentPlayer.rack = shuffleArray(currentPlayer.rack);
+    const rackCopy = currentPlayer.rack.map(tile => ({ ...tile }));
+    currentPlayer.rack = shuffleArray(rackCopy);
     
     setGameState(newGameState);
     
-    // Save the rack directly after shuffling to ensure it's saved
-    updatePlayerRacks(gameId, newGameState.players, newGameState.tileBag);
+    if (gameId) {
+      updatePlayerRacks(gameId, newGameState.players, newGameState.tileBag);
+    }
     
     toast({
       title: "Stöfum blandað",
@@ -561,6 +563,10 @@ const Game: React.FC = () => {
     });
     
     setGameState(newGameState);
+    
+    if (gameId) {
+      updateGameBoardState(gameId, newGameState);
+    }
   };
   
   const handleRecallTiles = function() {
@@ -582,7 +588,9 @@ const Game: React.FC = () => {
     
     newGameState.placedTiles = [];
     
-    updatePlayerRacks(gameId, newGameState.players, newGameState.tileBag);
+    if (gameId) {
+      updatePlayerRacks(gameId, newGameState.players, newGameState.tileBag);
+    }
     
     toast({
       title: "Stöfum skilað",
