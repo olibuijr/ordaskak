@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Users, Brain, UserCircle, List, Check, Play, Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { pb } from '@/services/pocketbase';
+import { pb, fetchUserGames, createNewGame } from '@/services/pocketbase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/components/ui/use-toast';
 import {
@@ -30,7 +29,7 @@ interface GameData {
   isActive: boolean;
   yourScore?: number;
   winner?: string;
-  user: string;
+  userId: string;
 }
 
 const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
@@ -45,37 +44,17 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
   const [showNewGame, setShowNewGame] = useState(false);
   const queryClient = useQueryClient();
   
-  // Fetch games from PocketBase
   const fetchGames = async () => {
     if (!user) return { activeGames: [], completedGames: [] };
     
     try {
-      const records = await pb.collection('games').getList(1, 50, {
-        filter: `user = "${user.id}"`,
-        sort: '-created',
-      });
-      
-      const games = records.items.map(item => ({
-        id: item.id,
-        created: item.created,
-        players: item.players,
-        isActive: item.isActive,
-        yourScore: item.yourScore,
-        winner: item.winner,
-        user: item.user
-      }));
-      
-      return {
-        activeGames: games.filter(game => game.isActive),
-        completedGames: games.filter(game => !game.isActive)
-      };
+      return await fetchUserGames(user.id);
     } catch (error) {
       console.error('Error fetching games:', error);
       throw error;
     }
   };
   
-  // Create a new game
   const createGame = async () => {
     if (!user) return null;
     
@@ -83,25 +62,23 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
       const data = {
         players: playerNames.slice(0, playerCount),
         isActive: true,
-        user: user.id
+        userId: user.id
       };
       
-      const record = await pb.collection('games').create(data);
-      return record;
+      return await createNewGame(data);
     } catch (error) {
       console.error('Error creating game:', error);
       throw error;
     }
   };
   
-  // Query for fetching games
   const { data: gamesData, isLoading, error } = useQuery({
     queryKey: ['games', user?.id],
     queryFn: fetchGames,
-    enabled: !!user
+    enabled: !!user,
+    retry: 1
   });
   
-  // Mutation for creating a new game
   const createGameMutation = useMutation({
     mutationFn: createGame,
     onSuccess: (data) => {
@@ -145,13 +122,27 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
     }).format(date);
   };
   
-  // If there's an error, show a message
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Card className="w-[700px] max-w-full bg-game-light/40 backdrop-blur-md border-game-accent-blue/30">
           <CardContent className="p-6">
-            <p className="text-red-500">Villa kom upp við að sækja leiki. Vinsamlegast reyndu aftur.</p>
+            <div className="text-center space-y-4">
+              <p className="text-red-500">Villa kom upp við að sækja leiki.</p>
+              <Button 
+                onClick={() => queryClient.invalidateQueries({ queryKey: ['games'] })}
+                className="bg-game-accent-blue hover:bg-game-accent-blue/80 text-black"
+              >
+                Reyna aftur
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setShowNewGame(true)}
+                className="ml-2 border-game-accent-blue/50 text-game-accent-blue hover:bg-game-accent-blue/20"
+              >
+                Nýr leikur
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -207,7 +198,6 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
               <div className="space-y-4">
                 <h3 className="text-sm font-medium mb-2">Nöfn spilara</h3>
                 
-                {/* Human player */}
                 <div className="flex items-center space-x-3">
                   <UserCircle className="h-5 w-5 text-game-accent-blue" />
                   <Input
@@ -218,7 +208,6 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
                   />
                 </div>
                 
-                {/* AI players based on count */}
                 {Array.from({ length: Math.min(playerCount - 1, 3) }).map((_, i) => (
                   <div key={i + 1} className="flex items-center space-x-3">
                     <Brain className="h-5 w-5 text-game-accent-purple" />
