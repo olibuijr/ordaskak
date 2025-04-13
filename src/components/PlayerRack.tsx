@@ -21,6 +21,7 @@ const TileComponent: React.FC<{
     }`}
     onClick={onClick}
     draggable="true"
+    data-tile-id={tile.id}
   >
     <span className="text-2xl font-bold">{tile.letter || '?'}</span>
     {tile.letter && <span className="letter-tile-value">{tile.value}</span>}
