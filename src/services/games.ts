@@ -1,3 +1,4 @@
+
 import { pb } from './pocketbase';
 import { getCurrentUser } from './authentication';
 
@@ -125,10 +126,35 @@ export const saveGameMove = async (moveData) => {
       return record;
     } catch (error) {
       console.error('Error saving game move:', error);
-      throw error;
+      console.error('Error details:', error.response?.data);
+      return null;
     }
   } catch (error) {
     console.error('Error in saveGameMove:', error);
+    return null;
+  }
+};
+
+// Improved function to fetch a game by ID with expanded player data
+export const fetchGameById = async (gameId) => {
+  try {
+    if (!gameId) {
+      console.error("No game ID provided to fetchGameById");
+      return null;
+    }
+    
+    const record = await pb.collection('games').getOne(gameId);
+    
+    if (!record) {
+      console.error("Game record not found:", gameId);
+      return null;
+    }
+    
+    console.log("Fetched game record:", record);
+    
+    return record;
+  } catch (error) {
+    console.error("Error fetching game by ID:", error);
     return null;
   }
 };
@@ -164,6 +190,9 @@ export const updateGameBoardState = async (gameId, gameState) => {
           }));
           
           gameState.currentPlayerIndex = 0;
+        } else {
+          console.error("No players found in the game record");
+          return null;
         }
       } catch (error) {
         console.error("Error fetching game record:", error);
@@ -214,34 +243,11 @@ export const updateGameBoardState = async (gameId, gameState) => {
       return record;
     } catch (error) {
       console.error('Error updating game board state:', error);
+      console.error('Error details:', error.response?.data);
       return null;
     }
   } catch (error) {
     console.error('Error in updateGameBoardState:', error);
-    return null;
-  }
-};
-
-// Improved function to fetch a game by ID with expanded player data
-export const fetchGameById = async (gameId) => {
-  try {
-    if (!gameId) {
-      console.error("No game ID provided to fetchGameById");
-      return null;
-    }
-    
-    const record = await pb.collection('games').getOne(gameId);
-    
-    if (!record) {
-      console.error("Game record not found:", gameId);
-      return null;
-    }
-    
-    console.log("Fetched game record:", record);
-    
-    return record;
-  } catch (error) {
-    console.error("Error fetching game by ID:", error);
     return null;
   }
 };

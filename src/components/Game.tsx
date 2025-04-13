@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import GameBoard from './GameBoard';
 import PlayerRack from './PlayerRack';
@@ -34,6 +33,7 @@ const Game: React.FC = () => {
   const location = useLocation();
   const [gameId, setGameId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -41,6 +41,8 @@ const Game: React.FC = () => {
     if (id) {
       setGameId(id);
       fetchExistingGame(id);
+    } else {
+      setIsInitialLoad(false);
     }
   }, [location]);
 
@@ -51,7 +53,7 @@ const Game: React.FC = () => {
       const record = await fetchGameById(id);
       
       if (record) {
-        console.log("Fetched game:", record);
+        console.log("Fetched game record:", record);
         
         // Get player IDs from the database (ensure it's an array)
         const playerIds = Array.isArray(record.players) ? record.players : [];
@@ -65,6 +67,7 @@ const Game: React.FC = () => {
             variant: "destructive",
           });
           setIsLoading(false);
+          setIsInitialLoad(false);
           return;
         }
         
@@ -194,15 +197,16 @@ const Game: React.FC = () => {
       });
     } finally {
       setIsLoading(false);
+      setIsInitialLoad(false);
     }
   };
 
   useEffect(() => {
-    if (gameState && gameId) {
+    if (gameState && gameId && !isInitialLoad) {
       console.log("Game state updated:", gameState);
       updateGameBoardState(gameId, gameState);
     }
-  }, [gameState, gameId]);
+  }, [gameState, gameId, isInitialLoad]);
   
   const handleStartGame = (playerCount: number, playerNames: string[], newGameId?: string) => {
     console.log("Starting game with", playerCount, "players");
@@ -524,12 +528,24 @@ const Game: React.FC = () => {
     );
   }
   
-  if (!gameState) {
+  if (!gameState && !isInitialLoad) {
     return <GameSetup onStartGame={handleStartGame} />;
   }
   
-  // Add a safety check to ensure we have at least one player
-  if (!gameState.players || gameState.players.length === 0) {
+  if (isInitialLoad) {
+    return (
+      <div className="container mx-auto px-4 py-6 flex flex-col gap-6 min-h-screen items-center justify-center">
+        <div className="text-center p-8 bg-game-dark rounded-lg">
+          <h2 className="text-2xl font-bold mb-3 text-game-accent-blue">
+            Hleð leik...
+          </h2>
+          <p>Vinsamlegast bíddu á meðan leikurinn er sóttur.</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!gameState || !gameState.players || gameState.players.length === 0) {
     return (
       <div className="container mx-auto px-4 py-6 flex flex-col gap-6 min-h-screen">
         <div className="text-center p-8 bg-game-dark rounded-lg">
@@ -548,14 +564,12 @@ const Game: React.FC = () => {
     );
   }
   
-  // Make sure currentPlayerIndex is within bounds
   const safeCurrentPlayerIndex = gameState.currentPlayerIndex >= 0 && 
                                 gameState.currentPlayerIndex < gameState.players.length ? 
                                 gameState.currentPlayerIndex : 0;
   
   const currentPlayer = gameState.players[safeCurrentPlayerIndex];
   
-  // Final safety check for current player
   if (!currentPlayer) {
     return (
       <div className="container mx-auto px-4 py-6 flex flex-col gap-6 min-h-screen">
