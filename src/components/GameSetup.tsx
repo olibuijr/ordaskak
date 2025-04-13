@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -7,6 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Users, Brain, UserCircle, List, Check, Play, Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { pb } from '@/services/pocketbase';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from '@/components/ui/use-toast';
 import {
   Table,
   TableBody,
@@ -22,11 +25,12 @@ interface GameSetupProps {
 
 interface GameData {
   id: string;
-  date: string;
+  created: string;
   players: string[];
   isActive: boolean;
   yourScore?: number;
   winner?: string;
+  user: string;
 }
 
 const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
@@ -39,47 +43,123 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
     'Tölva 3'
   ]);
   const [showNewGame, setShowNewGame] = useState(false);
+  const queryClient = useQueryClient();
   
-  // Mock data - would come from PocketBase in a real app
-  const gamesList: GameData[] = [
-    {
-      id: '1',
-      date: '13. apríl 2025, 10:30',
-      players: ['Þú', 'Tölva 1', 'Tölva 2'],
-      isActive: true
-    },
-    {
-      id: '2',
-      date: '12. apríl 2025, 15:45',
-      players: ['Þú', 'Tölva 1'],
-      isActive: true
-    },
-    {
-      id: '3',
-      date: '10. apríl 2025, 09:15',
-      players: ['Þú', 'Tölva 1', 'Tölva 2', 'Tölva 3'],
-      isActive: false,
-      yourScore: 120,
-      winner: 'Tölva 2'
-    },
-    {
-      id: '4',
-      date: '8. apríl 2025, 18:20',
-      players: ['Þú', 'Tölva 1'],
-      isActive: false,
-      yourScore: 145,
-      winner: 'Þú'
+  // Fetch games from PocketBase
+  const fetchGames = async () => {
+    if (!user) return { activeGames: [], completedGames: [] };
+    
+    try {
+      const records = await pb.collection('games').getList(1, 50, {
+        filter: `user = "${user.id}"`,
+        sort: '-created',
+      });
+      
+      const games = records.items.map(item => ({
+        id: item.id,
+        created: item.created,
+        players: item.players,
+        isActive: item.isActive,
+        yourScore: item.yourScore,
+        winner: item.winner,
+        user: item.user
+      }));
+      
+      return {
+        activeGames: games.filter(game => game.isActive),
+        completedGames: games.filter(game => !game.isActive)
+      };
+    } catch (error) {
+      console.error('Error fetching games:', error);
+      throw error;
     }
-  ];
+  };
   
-  const activeGames = gamesList.filter(game => game.isActive);
-  const completedGames = gamesList.filter(game => !game.isActive);
+  // Create a new game
+  const createGame = async () => {
+    if (!user) return null;
+    
+    try {
+      const data = {
+        players: playerNames.slice(0, playerCount),
+        isActive: true,
+        user: user.id
+      };
+      
+      const record = await pb.collection('games').create(data);
+      return record;
+    } catch (error) {
+      console.error('Error creating game:', error);
+      throw error;
+    }
+  };
+  
+  // Query for fetching games
+  const { data: gamesData, isLoading, error } = useQuery({
+    queryKey: ['games', user?.id],
+    queryFn: fetchGames,
+    enabled: !!user
+  });
+  
+  // Mutation for creating a new game
+  const createGameMutation = useMutation({
+    mutationFn: createGame,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['games'] });
+      setShowNewGame(false);
+      if (data) {
+        onStartGame(
+          data.players.length, 
+          data.players
+        );
+      }
+      toast({
+        title: "Nýr leikur",
+        description: "Leikur hefur verið búinn til!",
+      });
+    },
+    onError: (error) => {
+      console.error('Error creating game:', error);
+      toast({
+        title: "Villa",
+        description: "Ekki tókst að búa til nýjan leik.",
+        variant: "destructive"
+      });
+    }
+  });
   
   const handleNameChange = (index: number, name: string) => {
     const newNames = [...playerNames];
     newNames[index] = name;
     setPlayerNames(newNames);
   };
+  
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('is-IS', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
+  };
+  
+  // If there's an error, show a message
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="w-[700px] max-w-full bg-game-light/40 backdrop-blur-md border-game-accent-blue/30">
+          <CardContent className="p-6">
+            <p className="text-red-500">Villa kom upp við að sækja leiki. Vinsamlegast reyndu aftur.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
+  const activeGames = gamesData?.activeGames || [];
+  const completedGames = gamesData?.completedGames || [];
   
   return (
     <div className="flex items-center justify-center min-h-screen">
@@ -153,13 +233,11 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
               </div>
               
               <Button 
-                onClick={() => onStartGame(
-                  playerCount, 
-                  playerNames.slice(0, playerCount)
-                )}
+                onClick={() => createGameMutation.mutate()}
+                disabled={createGameMutation.isPending}
                 className="w-full bg-game-accent-blue hover:bg-game-accent-blue/80 text-black"
               >
-                Hefja leik
+                {createGameMutation.isPending ? "Hleð..." : "Hefja leik"}
               </Button>
             </div>
           ) : (
@@ -175,80 +253,100 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
                 </Button>
               </div>
               
-              {activeGames.length > 0 && (
-                <div className="space-y-3">
-                  <h3 className="text-lg font-medium flex items-center">
-                    <Play className="mr-2 h-5 w-5 text-game-accent-green" />
-                    Virk spil ({activeGames.length})
-                  </h3>
-                  <ScrollArea className="h-[180px] rounded-md border border-game-accent-blue/20 bg-game-dark/30">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="hover:bg-transparent">
-                          <TableHead className="text-game-accent-blue">Dagsetning</TableHead>
-                          <TableHead className="text-game-accent-blue">Spilarar</TableHead>
-                          <TableHead className="text-right text-game-accent-blue">Aðgerðir</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {activeGames.map((game) => (
-                          <TableRow key={game.id} className="hover:bg-game-dark/50">
-                            <TableCell>{game.date}</TableCell>
-                            <TableCell>{game.players.join(', ')}</TableCell>
-                            <TableCell className="text-right">
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => onStartGame(game.players.length, game.players)}
-                                className="border-game-accent-blue/50 text-game-accent-blue hover:bg-game-accent-blue/20"
-                              >
-                                <Play className="mr-2 h-4 w-4" />
-                                Halda áfram
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </ScrollArea>
+              {isLoading ? (
+                <div className="py-8 text-center">
+                  <p>Hleð leikjum...</p>
                 </div>
-              )}
-              
-              {completedGames.length > 0 && (
-                <div className="space-y-3">
-                  <h3 className="text-lg font-medium flex items-center">
-                    <Check className="mr-2 h-5 w-5 text-game-accent-purple" />
-                    Kláraðir leikir ({completedGames.length})
-                  </h3>
-                  <ScrollArea className="h-[180px] rounded-md border border-game-accent-blue/20 bg-game-dark/30">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="hover:bg-transparent">
-                          <TableHead className="text-game-accent-blue">Dagsetning</TableHead>
-                          <TableHead className="text-game-accent-blue">Spilarar</TableHead>
-                          <TableHead className="text-game-accent-blue">Úrslit</TableHead>
-                          <TableHead className="text-right text-game-accent-blue">Stig þín</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {completedGames.map((game) => (
-                          <TableRow key={game.id} className="hover:bg-game-dark/50">
-                            <TableCell>{game.date}</TableCell>
-                            <TableCell>{game.players.join(', ')}</TableCell>
-                            <TableCell>
-                              {game.winner === 'Þú' ? (
-                                <span className="text-game-accent-green font-medium">Þú vannst!</span>
-                              ) : (
-                                <span>{game.winner} vann</span>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-right font-medium">{game.yourScore}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </ScrollArea>
-                </div>
+              ) : (
+                <>
+                  {activeGames.length > 0 && (
+                    <div className="space-y-3">
+                      <h3 className="text-lg font-medium flex items-center">
+                        <Play className="mr-2 h-5 w-5 text-game-accent-green" />
+                        Virk spil ({activeGames.length})
+                      </h3>
+                      <ScrollArea className="h-[180px] rounded-md border border-game-accent-blue/20 bg-game-dark/30">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="hover:bg-transparent">
+                              <TableHead className="text-game-accent-blue">Dagsetning</TableHead>
+                              <TableHead className="text-game-accent-blue">Spilarar</TableHead>
+                              <TableHead className="text-right text-game-accent-blue">Aðgerðir</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {activeGames.map((game) => (
+                              <TableRow key={game.id} className="hover:bg-game-dark/50">
+                                <TableCell>{formatDate(game.created)}</TableCell>
+                                <TableCell>{game.players.join(', ')}</TableCell>
+                                <TableCell className="text-right">
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => onStartGame(game.players.length, game.players)}
+                                    className="border-game-accent-blue/50 text-game-accent-blue hover:bg-game-accent-blue/20"
+                                  >
+                                    <Play className="mr-2 h-4 w-4" />
+                                    Halda áfram
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </ScrollArea>
+                    </div>
+                  )}
+                  
+                  {completedGames.length > 0 && (
+                    <div className="space-y-3">
+                      <h3 className="text-lg font-medium flex items-center">
+                        <Check className="mr-2 h-5 w-5 text-game-accent-purple" />
+                        Kláraðir leikir ({completedGames.length})
+                      </h3>
+                      <ScrollArea className="h-[180px] rounded-md border border-game-accent-blue/20 bg-game-dark/30">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="hover:bg-transparent">
+                              <TableHead className="text-game-accent-blue">Dagsetning</TableHead>
+                              <TableHead className="text-game-accent-blue">Spilarar</TableHead>
+                              <TableHead className="text-game-accent-blue">Úrslit</TableHead>
+                              <TableHead className="text-right text-game-accent-blue">Stig þín</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {completedGames.map((game) => (
+                              <TableRow key={game.id} className="hover:bg-game-dark/50">
+                                <TableCell>{formatDate(game.created)}</TableCell>
+                                <TableCell>{game.players.join(', ')}</TableCell>
+                                <TableCell>
+                                  {game.winner === playerNames[0] ? (
+                                    <span className="text-game-accent-green font-medium">Þú vannst!</span>
+                                  ) : (
+                                    <span>{game.winner} vann</span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-right font-medium">{game.yourScore}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </ScrollArea>
+                    </div>
+                  )}
+                  
+                  {activeGames.length === 0 && completedGames.length === 0 && (
+                    <div className="py-8 text-center">
+                      <p className="mb-4 text-muted-foreground">Þú hefur ekki spilað neina leiki ennþá.</p>
+                      <Button 
+                        onClick={() => setShowNewGame(true)} 
+                        className="bg-game-accent-blue hover:bg-game-accent-blue/80 text-black"
+                      >
+                        Búa til fyrsta leikinn
+                      </Button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
