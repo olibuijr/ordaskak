@@ -13,7 +13,15 @@ import Profile from "./pages/Profile";
 import Game from "./components/Game";
 import Navbar from "./components/Navbar";
 
-const queryClient = new QueryClient();
+// Create a persistent query client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 30 * 1000, // 30 seconds
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

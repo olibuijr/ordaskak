@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import GameBoard from './GameBoard';
 import PlayerRack from './PlayerRack';
@@ -46,14 +47,29 @@ const Game: React.FC = () => {
   const fetchExistingGame = async (id: string) => {
     try {
       setIsLoading(true);
+      console.log("Fetching game with ID:", id);
       const record = await fetchGameById(id);
       
       if (record) {
         console.log("Fetched game:", record);
         
-        // Get player IDs from the database
-        const playerIds = record.players || [];
-        const playerNames = record.playerNames || [];
+        // Get player IDs from the database (ensure it's an array)
+        const playerIds = Array.isArray(record.players) ? record.players : [];
+        const playerNames = Array.isArray(record.playerNames) ? record.playerNames : [];
+        
+        if (playerIds.length === 0) {
+          console.error("No players found in the game record");
+          toast({
+            title: "Villa við að sækja leik",
+            description: "Engir spilarar fundust í leiknum. Vinsamlegast reyndu aftur.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+        
+        console.log("Player IDs from database:", playerIds);
+        console.log("Player names from database:", playerNames);
         
         // Create player objects with the correct database IDs
         const playersArray = playerIds.map((playerId, index) => ({
@@ -62,14 +78,24 @@ const Game: React.FC = () => {
           score: 0,
           rack: [],
           isAI: false,
-          isActive: playerId === record.current_player_index
+          isActive: false // Will set the active player below
         }));
         
-        // Find the current player index in our players array
-        const currentPlayerIndex = playersArray.findIndex(player => player.id === record.current_player_index);
-        const validCurrentPlayerIndex = currentPlayerIndex !== -1 ? currentPlayerIndex : 0;
+        // Get current player index from the database
+        let currentPlayerIndex = 0;
+        if (record.current_player_index) {
+          // Find the index of the current player in our players array
+          currentPlayerIndex = playersArray.findIndex(player => player.id === record.current_player_index);
+          // If not found, default to the first player
+          if (currentPlayerIndex === -1) currentPlayerIndex = 0;
+        }
         
-        console.log("Current player index:", validCurrentPlayerIndex);
+        // Set the active player
+        playersArray.forEach((player, index) => {
+          player.isActive = index === currentPlayerIndex;
+        });
+        
+        console.log("Current player index:", currentPlayerIndex);
         console.log("Players array:", playersArray);
         
         // Ensure we have a valid board state
@@ -94,14 +120,14 @@ const Game: React.FC = () => {
         const loadedGameState: GameState = {
           board: boardState,
           players: playersArray,
-          currentPlayerIndex: validCurrentPlayerIndex,
+          currentPlayerIndex: currentPlayerIndex,
           tileBag: tileBagState,
           isGameOver: record.status !== 'in_progress',
           winner: null,
           placedTiles: []
         };
         
-        console.log("Converted game state:", loadedGameState);
+        console.log("Loaded game state:", loadedGameState);
         
         // Check if we need to deal tiles to players
         const updatedGameState = { ...loadedGameState };
