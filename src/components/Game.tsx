@@ -32,6 +32,7 @@ const Game: React.FC = () => {
   const { user } = useAuth();
   const location = useLocation();
   const [gameId, setGameId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -44,6 +45,7 @@ const Game: React.FC = () => {
 
   const fetchExistingGame = async (id: string) => {
     try {
+      setIsLoading(true);
       const record = await fetchGameById(id);
       
       if (record) {
@@ -65,15 +67,35 @@ const Game: React.FC = () => {
         
         // Find the current player index in our players array
         const currentPlayerIndex = playersArray.findIndex(player => player.id === record.current_player_index);
+        const validCurrentPlayerIndex = currentPlayerIndex !== -1 ? currentPlayerIndex : 0;
         
-        console.log("Current player index:", currentPlayerIndex);
+        console.log("Current player index:", validCurrentPlayerIndex);
         console.log("Players array:", playersArray);
         
+        // Ensure we have a valid board state
+        let boardState;
+        try {
+          boardState = record.board_state ? JSON.parse(record.board_state) : initializeGame(2).board;
+        } catch (e) {
+          console.error("Error parsing board state:", e);
+          boardState = initializeGame(2).board;
+        }
+        
+        // Ensure we have a valid tile bag
+        let tileBagState;
+        try {
+          tileBagState = record.tile_bag ? JSON.parse(record.tile_bag) : createTileBag();
+        } catch (e) {
+          console.error("Error parsing tile bag:", e);
+          tileBagState = createTileBag();
+        }
+        
+        // Create the game state
         const loadedGameState: GameState = {
-          board: record.board_state ? JSON.parse(record.board_state) : initializeGame(2).board,
+          board: boardState,
           players: playersArray,
-          currentPlayerIndex: currentPlayerIndex !== -1 ? currentPlayerIndex : 0,
-          tileBag: record.tile_bag ? JSON.parse(record.tile_bag) : createTileBag(),
+          currentPlayerIndex: validCurrentPlayerIndex,
+          tileBag: tileBagState,
           isGameOver: record.status !== 'in_progress',
           winner: null,
           placedTiles: []
@@ -87,18 +109,12 @@ const Game: React.FC = () => {
         
         // Deal tiles to players if their racks are empty
         for (let i = 0; i < updatedGameState.players.length; i++) {
-          if (updatedGameState.players[i].rack.length === 0) {
+          if (!updatedGameState.players[i].rack || updatedGameState.players[i].rack.length === 0) {
             const { drawn, remaining } = drawTiles(updatedGameState.tileBag, 7);
             updatedGameState.players[i].rack = drawn;
             updatedGameState.tileBag = remaining;
             needUpdate = true;
           }
-        }
-        
-        if (needUpdate) {
-          setGameState(updatedGameState);
-        } else {
-          setGameState(loadedGameState);
         }
         
         // Fetch game moves to build word history
@@ -118,19 +134,30 @@ const Game: React.FC = () => {
             setWordHistory(history);
             
             // Update player scores from moves
-            if (needUpdate) {
-              movesRecords.items.forEach(move => {
-                const playerIndex = updatedGameState.players.findIndex(p => p.id === move.user);
-                if (playerIndex !== -1) {
-                  updatedGameState.players[playerIndex].score += (move.score_gained || 0);
-                }
-              });
-              setGameState(updatedGameState);
-            }
+            movesRecords.items.forEach(move => {
+              const playerIndex = updatedGameState.players.findIndex(p => p.id === move.user);
+              if (playerIndex !== -1) {
+                updatedGameState.players[playerIndex].score += (move.score_gained || 0);
+              }
+            });
           }
         } catch (error) {
           console.error("Error fetching game moves:", error);
         }
+        
+        // Set the game state
+        setGameState(updatedGameState);
+        
+        // If we needed to update (e.g., deal tiles), save the changes
+        if (needUpdate) {
+          updateGameBoardState(id, updatedGameState);
+        }
+      } else {
+        toast({
+          title: "Villa við að sækja leik",
+          description: "Leikur fannst ekki. Vinsamlegast reyndu aftur.",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("Error fetching game:", error);
@@ -139,6 +166,8 @@ const Game: React.FC = () => {
         description: "Ekki tókst að sækja leikinn. Vinsamlegast reyndu aftur.",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -455,6 +484,19 @@ const Game: React.FC = () => {
     setGameState(newGameState);
     setPlacedTilesMap(new Map());
   };
+  
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-6 flex flex-col gap-6 min-h-screen items-center justify-center">
+        <div className="text-center p-8 bg-game-dark rounded-lg">
+          <h2 className="text-2xl font-bold mb-3 text-game-accent-blue">
+            Hleð leik...
+          </h2>
+          <p>Vinsamlegast bíddu á meðan leikurinn er sóttur.</p>
+        </div>
+      </div>
+    );
+  }
   
   if (!gameState) {
     return <GameSetup onStartGame={handleStartGame} />;
