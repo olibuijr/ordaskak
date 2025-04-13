@@ -60,9 +60,11 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
     if (!user) return null;
     
     try {
+      const selectedPlayers = playerNames.slice(0, playerCount);
+      
       const data = {
         name: `Leikur ${new Date().toLocaleString('is-IS')}`,
-        players: playerNames.slice(0, playerCount),
+        players: selectedPlayers,
         isActive: true,
         userId: user.id
       };

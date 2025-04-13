@@ -1,4 +1,3 @@
-
 import PocketBase from 'pocketbase';
 
 // Create a single PocketBase instance for the entire app
@@ -39,7 +38,7 @@ export const fetchUserGames = async (userId) => {
       id: item.id,
       created: item.created,
       players: item.players || [],
-      isActive: item.status === 'active',
+      isActive: item.status === 'in_progress', // Updated to match valid status
       yourScore: item.yourScore,
       winner: item.winner,
       userId: item.created_by || item.userId,
@@ -59,17 +58,20 @@ export const fetchUserGames = async (userId) => {
 // Create a new game with all required fields
 export const createNewGame = async (data) => {
   try {
+    // Based on the error message, we need to:
+    // 1. Set current_player_index correctly
+    // 2. Include players field as an array
+    // 3. Use a valid status value (not "active")
+    
     // Format data to match the required fields from the error message
     const gameData = {
       name: data.name || `Game ${new Date().toLocaleString('is-IS')}`,
       created_by: data.userId, // Required field
       current_player_index: 0, // Required field, starting with first player
-      status: 'active', // Required field ('active' or 'completed')
-      // For relation fields like 'players', we need to handle differently
-      // Since 'players' expects relation records, but we're passing strings
-      // We'll use a custom field to store player names
-      playerNames: data.players, // Store player names as a JSON array
-      // Any other fields
+      status: 'in_progress', // Changed from "active" to "in_progress"
+      players: data.players.map(name => ({ name })), // Format players as array of objects
+      // Any other fields we want to keep
+      playerNames: data.players, // Store player names for easy access
       isActive: true,
       userId: data.userId
     };
