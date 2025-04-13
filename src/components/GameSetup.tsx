@@ -64,8 +64,8 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
               <UserCircle className="h-5 w-5 text-game-accent-blue" />
               <Input
                 value={playerNames[0]}
-                onChange={(e) => handleNameChange(0, e.target.value)}
-                className="bg-game-dark/60"
+                readOnly
+                className="bg-game-dark/60 cursor-default"
                 placeholder="Þitt nafn"
               />
             </div>
