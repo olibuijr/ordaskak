@@ -12,7 +12,11 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 const formSchema = z.object({
-  username: z.string().min(3, { message: 'Notandanafn verður að vera að minnsta kosti 3 stafir.' }),
+  username: z.string().min(3, { message: 'Notandanafn verður að vera að minnsta kosti 3 stafir.' })
+    .regex(/^[a-zA-Z0-9_.]+$/, { 
+      message: 'Notandanafn má aðeins innihalda bókstafi, tölur, undirstrik og punkta.' 
+    }),
+  fullName: z.string().min(2, { message: 'Nafn verður að vera að minnsta kosti 2 stafir.' }),
   email: z.string().email({ message: 'Vinsamlegast sláðu inn gilt netfang.' }),
   password: z.string().min(6, { message: 'Lykilorð verður að vera að minnsta kosti 6 stafir.' }),
   passwordConfirm: z.string(),
@@ -31,6 +35,7 @@ const Register = () => {
     resolver: zodResolver(formSchema),
     defaultValues: {
       username: '',
+      fullName: '',
       email: '',
       password: '',
       passwordConfirm: '',
@@ -41,6 +46,7 @@ const Register = () => {
     try {
       const userData = {
         username: data.username,
+        name: data.fullName,
         email: data.email,
         password: data.password,
         passwordConfirm: data.passwordConfirm,
@@ -81,7 +87,20 @@ const Register = () => {
                 <FormItem>
                   <FormLabel>Notandanafn</FormLabel>
                   <FormControl>
-                    <Input placeholder="Notandanafn" {...field} />
+                    <Input placeholder="Notandanafn (t.d. johndoe)" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="fullName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Fullt nafn</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Jón Jónsson" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
