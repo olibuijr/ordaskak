@@ -24,8 +24,16 @@ const Game: React.FC = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   
+  useEffect(() => {
+    if (gameState) {
+      console.log("Game state updated:", gameState);
+    }
+  }, [gameState]);
+  
   const handleStartGame = (playerCount: number, playerNames: string[]) => {
+    console.log("Starting game with", playerCount, "players");
     const newGameState = initializeGame(playerCount, playerNames);
+    console.log("Initial game state:", newGameState);
     setGameState(newGameState);
     toast({
       title: "Game Started",
@@ -34,6 +42,7 @@ const Game: React.FC = () => {
   };
   
   const handleTileClick = (tile: Tile) => {
+    console.log("Tile clicked:", tile);
     // Toggle selection
     if (selectedTile?.id === tile.id) {
       setSelectedTile(null);
@@ -43,6 +52,7 @@ const Game: React.FC = () => {
   };
   
   const handleCellClick = (x: number, y: number) => {
+    console.log("Cell clicked:", x, y);
     if (!gameState || !selectedTile) return;
     
     // Check if the cell already has a tile
@@ -93,7 +103,7 @@ const Game: React.FC = () => {
     setGameState(newGameState);
   };
   
-  const handlePlayWord = () => {
+  const handlePlayWord = function() {
     if (!gameState) return;
     
     // Here we would validate the word and calculate score
@@ -162,7 +172,7 @@ const Game: React.FC = () => {
     setPlacedTilesMap(new Map());
   };
   
-  const handleShuffleTiles = () => {
+  const handleShuffleTiles = function() {
     if (!gameState) return;
     
     const newGameState = { ...gameState };
@@ -179,7 +189,7 @@ const Game: React.FC = () => {
     });
   };
   
-  const handlePassTurn = () => {
+  const handlePassTurn = function() {
     if (!gameState) return;
     
     const newGameState = { ...gameState };
@@ -203,7 +213,7 @@ const Game: React.FC = () => {
     setGameState(newGameState);
   };
   
-  const handleRecallTiles = () => {
+  const handleRecallTiles = function() {
     if (!gameState) return;
     
     const newGameState = { ...gameState };
@@ -265,10 +275,10 @@ const Game: React.FC = () => {
             
             <GameControls
               currentPlayer={currentPlayer}
-              onPlayWord={handlePlayWord}
-              onShuffleTiles={handleShuffleTiles}
-              onPassTurn={handlePassTurn}
-              onRecallTiles={handleRecallTiles}
+              onPlayWord={() => handlePlayWord()}
+              onShuffleTiles={() => handleShuffleTiles()}
+              onPassTurn={() => handlePassTurn()}
+              onRecallTiles={() => handleRecallTiles()}
               canPlay={gameState.placedTiles.length > 0}
             />
           </div>

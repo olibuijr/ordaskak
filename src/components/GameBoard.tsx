@@ -1,6 +1,6 @@
 
 import React, { useRef } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera, Text } from '@react-three/drei';
 import * as THREE from 'three';
 import { BoardCell } from '@/utils/gameLogic';
@@ -59,17 +59,17 @@ const Cell: React.FC<{
       {/* Cell base */}
       <boxGeometry args={[0.95, 0.1, 0.95]} />
       <meshStandardMaterial 
-        color={color as any} 
+        color={color} 
         metalness={0.1}
         roughness={0.8}
-        emissive={hovered ? "#64FFDA" as any : "#000000" as any}
+        emissive={hovered ? "#64FFDA" : "#000000"}
         emissiveIntensity={hovered ? 0.3 : 0}
       />
       
       {/* Cell border */}
       <lineSegments>
         <edgesGeometry args={[new THREE.BoxGeometry(0.95, 0.1, 0.95)]} />
-        <lineBasicMaterial color={"#192741" as any} linewidth={1} />
+        <lineBasicMaterial color={"#192741"} linewidth={1} />
       </lineSegments>
       
       {cell.tile ? (
@@ -81,19 +81,6 @@ const Cell: React.FC<{
               color="#e2c088" 
               metalness={0.3} 
               roughness={0.2}
-              // Add wood-like texture to tiles
-              onBeforeCompile={(shader) => {
-                shader.fragmentShader = shader.fragmentShader.replace(
-                  'void main() {',
-                  `
-                  float noise(vec2 p) {
-                    return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
-                  }
-                  void main() {
-                    // Add some wood-grain like noise
-                  `
-                );
-              }}
             />
           </mesh>
           
@@ -158,15 +145,15 @@ const Board: React.FC<GameBoardProps> = ({ board, onCellClick }) => {
       {/* Board background */}
       <mesh position={[0, -0.1, 0]} receiveShadow>
         <boxGeometry args={[boardSize + 0.5, 0.2, boardSize + 0.5]} />
-        <meshStandardMaterial color={"#0F1624" as any} />
+        <meshStandardMaterial color={"#0F1624"} />
       </mesh>
       
       {/* Board frame */}
       <mesh position={[0, -0.05, 0]}>
         <boxGeometry args={[boardSize + 0.8, 0.02, boardSize + 0.8]} />
         <meshStandardMaterial
-          color={"#64FFDA" as any}
-          emissive={"#64FFDA" as any}
+          color={"#64FFDA"}
+          emissive={"#64FFDA"}
           emissiveIntensity={0.3}
         />
       </mesh>
@@ -177,13 +164,13 @@ const Board: React.FC<GameBoardProps> = ({ board, onCellClick }) => {
           {/* Horizontal grid line */}
           <mesh position={[0, 0.001, i - gridSize / 2]} rotation={[Math.PI / 2, 0, 0]}>
             <planeGeometry args={[boardSize, 0.01]} />
-            <meshBasicMaterial color={"#333a44" as any} transparent opacity={0.3} />
+            <meshBasicMaterial color={"#333a44"} transparent opacity={0.3} />
           </mesh>
           
           {/* Vertical grid line */}
           <mesh position={[i - gridSize / 2, 0.001, 0]} rotation={[Math.PI / 2, 0, Math.PI / 2]}>
             <planeGeometry args={[boardSize, 0.01]} />
-            <meshBasicMaterial color={"#333a44" as any} transparent opacity={0.3} />
+            <meshBasicMaterial color={"#333a44"} transparent opacity={0.3} />
           </mesh>
         </React.Fragment>
       ))}
@@ -208,9 +195,12 @@ const Board: React.FC<GameBoardProps> = ({ board, onCellClick }) => {
 };
 
 const GameBoardCanvas: React.FC<GameBoardProps> = (props) => {
+  console.log("Rendering GameBoardCanvas", props.board.length);
+  
   return (
-    <div className="w-full h-full">
-      <Canvas shadows>
+    <div className="w-full h-full rounded-lg overflow-hidden">
+      <Canvas shadows dpr={[1, 2]}>
+        <color attach="background" args={['#0F1624']} />
         <PerspectiveCamera makeDefault position={[0, 13, 13]} />
         <OrbitControls
           enableZoom={true}

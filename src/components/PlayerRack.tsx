@@ -32,15 +32,17 @@ const PlayerRack: React.FC<PlayerRackProps> = ({
   onTileClick, 
   selectedTileId 
 }) => {
+  // Always show tiles face up for better usability
+  const showTiles = true;
+
   return (
-    <div className={`player-rack rounded-lg flex flex-row justify-center items-center
-      ${isCurrentPlayer ? 'bg-opacity-80 glow-effect' : 'bg-opacity-40 opacity-60'} 
-      mx-auto p-4 my-4 max-w-3xl`}
+    <div className="player-rack rounded-lg flex flex-row justify-center items-center
+      mx-auto p-4 my-4 max-w-3xl"
     >
       {tiles.map((tile) => (
         <ReactCardFlip 
           key={tile.id} 
-          isFlipped={isCurrentPlayer} 
+          isFlipped={showTiles} 
           flipDirection="horizontal"
           containerClassName="inline-block"
         >
