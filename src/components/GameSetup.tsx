@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { pb, fetchUserGames, createNewGame, searchUsers } from '@/services/pocketbase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/components/ui/use-toast';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Table,
   TableBody,
@@ -240,8 +240,16 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
               <div className="space-y-4">
                 <h3 className="text-sm font-medium mb-2">Spilarar</h3>
                 
-                <div className="flex items-center space-x-3">
-                  <UserCircle className="h-5 w-5 text-game-accent-blue" />
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10 border border-game-accent-blue/30">
+                    <AvatarImage 
+                      src={user?.id ? `${pb.baseUrl}/api/files/users/${user.id}/avatar` : ''} 
+                      alt={user?.username} 
+                    />
+                    <AvatarFallback className="bg-game-dark text-game-accent-blue">
+                      {user?.username?.charAt(0).toUpperCase() || <UserCircle />}
+                    </AvatarFallback>
+                  </Avatar>
                   <Input
                     value={user?.name || user?.username || 'Notandi'}
                     readOnly
@@ -275,11 +283,22 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
                           {searchResults.map((result) => (
                             <div 
                               key={result.id}
-                              className="p-2 hover:bg-game-accent-blue/20 cursor-pointer rounded-sm"
+                              className="p-2 hover:bg-game-accent-blue/20 cursor-pointer rounded-sm flex items-center space-x-3"
                               onClick={() => handleSelectUser(result)}
                             >
-                              <p className="font-medium">{result.name || result.username}</p>
-                              <p className="text-sm text-muted-foreground truncate">{result.email}</p>
+                              <Avatar className="h-8 w-8 border border-game-accent-blue/30">
+                                <AvatarImage 
+                                  src={`${pb.baseUrl}/api/files/users/${result.id}/avatar`} 
+                                  alt={result.username} 
+                                />
+                                <AvatarFallback className="bg-game-dark text-game-accent-purple">
+                                  {result.username?.charAt(0).toUpperCase() || <UserCircle />}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="font-medium">{result.name || result.username}</p>
+                                <p className="text-sm text-muted-foreground truncate">{result.email}</p>
+                              </div>
                             </div>
                           ))}
                         </ScrollArea>
@@ -293,8 +312,16 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
                       <h4 className="text-sm font-medium">Valdir spilarar</h4>
                       {selectedUsers.map((selectedUser) => (
                         <div key={selectedUser.id} className="flex justify-between items-center p-2 bg-game-dark/30 rounded-md">
-                          <div className="flex items-center space-x-2">
-                            <UserCircle className="h-5 w-5 text-game-accent-purple" />
+                          <div className="flex items-center space-x-3">
+                            <Avatar className="h-8 w-8 border border-game-accent-blue/30">
+                              <AvatarImage 
+                                src={`${pb.baseUrl}/api/files/users/${selectedUser.id}/avatar`} 
+                                alt={selectedUser.username} 
+                              />
+                              <AvatarFallback className="bg-game-dark text-game-accent-purple">
+                                {selectedUser.username?.charAt(0).toUpperCase() || <UserCircle />}
+                              </AvatarFallback>
+                            </Avatar>
                             <span>{selectedUser.name || selectedUser.username}</span>
                           </div>
                           <Button 
