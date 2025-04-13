@@ -38,6 +38,7 @@ interface UserData {
   username: string;
   email: string;
   name: string;
+  avatar?: string | null;
 }
 
 const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
@@ -66,7 +67,6 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
     setIsSearching(true);
     try {
       const results = await searchUsers(searchQuery);
-      // Filter out already selected users and the current user
       const filteredResults = results.filter(
         result => !selectedUsers.some(u => u.id === result.id) && result.id !== user?.id
       );
@@ -97,7 +97,6 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
     if (!user) return null;
     
     try {
-      // Include the current user as the first player
       const playerNames = [
         user.name || user.username || 'Þú',
         ...selectedUsers.map(u => u.name || u.username)
@@ -108,7 +107,7 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
       const data = {
         name: `Leikur ${new Date().toLocaleString('is-IS')}`,
         playerNames: playerNames,
-        selectedUsers: selectedUsers, // Pass the selected users to createNewGame
+        selectedUsers: selectedUsers,
         isActive: true,
         userId: user.id
       };
@@ -258,7 +257,6 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
                   />
                 </div>
                 
-                {/* Search for other players */}
                 <div className="space-y-4 mt-4">
                   <div className="relative">
                     <div className="flex space-x-2">
@@ -288,7 +286,7 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
                             >
                               <Avatar className="h-8 w-8 border border-game-accent-blue/30">
                                 <AvatarImage 
-                                  src={`${pb.baseUrl}/api/files/users/${result.id}/avatar`} 
+                                  src={result.avatar || undefined} 
                                   alt={result.username} 
                                 />
                                 <AvatarFallback className="bg-game-dark text-game-accent-purple">
@@ -306,7 +304,6 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
                     )}
                   </div>
                   
-                  {/* Selected users */}
                   {selectedUsers.length > 0 && (
                     <div className="space-y-2">
                       <h4 className="text-sm font-medium">Valdir spilarar</h4>
@@ -315,7 +312,7 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
                           <div className="flex items-center space-x-3">
                             <Avatar className="h-8 w-8 border border-game-accent-blue/30">
                               <AvatarImage 
-                                src={`${pb.baseUrl}/api/files/users/${selectedUser.id}/avatar`} 
+                                src={selectedUser.avatar || undefined} 
                                 alt={selectedUser.username} 
                               />
                               <AvatarFallback className="bg-game-dark text-game-accent-purple">
