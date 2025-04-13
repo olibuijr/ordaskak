@@ -5,14 +5,21 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
 import { Users, Brain, UserCircle } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface GameSetupProps {
   onStartGame: (playerCount: number, playerNames: string[]) => void;
 }
 
 const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
+  const { user } = useAuth();
   const [playerCount, setPlayerCount] = useState(2);
-  const [playerNames, setPlayerNames] = useState<string[]>(['Player 1', 'AI 1', 'AI 2', 'AI 3']);
+  const [playerNames, setPlayerNames] = useState<string[]>([
+    user?.name || user?.username || 'Spilari 1', 
+    'Tölva 1', 
+    'Tölva 2', 
+    'Tölva 3'
+  ]);
   
   const handleNameChange = (index: number, name: string) => {
     const newNames = [...playerNames];
@@ -27,13 +34,13 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
           <CardTitle className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-game-accent-blue to-game-accent-purple">
             Orðaskák
           </CardTitle>
-          <p className="text-muted-foreground mt-2">Futuristic Icelandic Word Game</p>
+          <p className="text-muted-foreground mt-2">Íslenskur orðaleikur í framtíðarstíl</p>
         </CardHeader>
         
         <CardContent className="space-y-6">
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <label className="text-sm font-medium">Number of Players ({playerCount})</label>
+              <label className="text-sm font-medium">Fjöldi spilara ({playerCount})</label>
               <div className="flex gap-2 text-muted-foreground text-sm">
                 <span>1</span>
                 <span>4</span>
@@ -50,7 +57,7 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
           </div>
           
           <div className="space-y-4">
-            <h3 className="text-sm font-medium mb-2">Player Names</h3>
+            <h3 className="text-sm font-medium mb-2">Nöfn spilara</h3>
             
             {/* Human player */}
             <div className="flex items-center space-x-3">
@@ -59,7 +66,7 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
                 value={playerNames[0]}
                 onChange={(e) => handleNameChange(0, e.target.value)}
                 className="bg-game-dark/60"
-                placeholder="Your name"
+                placeholder="Þitt nafn"
               />
             </div>
             
@@ -71,7 +78,7 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
                   value={playerNames[i + 1]}
                   onChange={(e) => handleNameChange(i + 1, e.target.value)}
                   className="bg-game-dark/60"
-                  placeholder={`AI ${i + 1}`}
+                  placeholder={`Tölva ${i + 1}`}
                 />
               </div>
             ))}
@@ -84,7 +91,7 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
             )}
             className="w-full bg-game-accent-blue hover:bg-game-accent-blue/80 text-black"
           >
-            Start Game
+            Hefja leik
           </Button>
         </CardContent>
       </Card>
