@@ -61,16 +61,19 @@ export const createNewGame = async (data) => {
   try {
     console.log("Creating new game with data:", data);
     
+    // Create dummy player IDs for the API requirement
+    const playerIds = data.players.map((_, index) => `player_${index}`);
+    
     // Format data to match the required fields for PocketBase
     const gameData = {
       name: data.name || `Game ${new Date().toLocaleString('is-IS')}`,
       created_by: data.userId,
-      current_player_index: "0", // Convert to string as the API might expect
+      current_player_index: "0", // As a string per API requirement
       status: "in_progress",
-      // Store player names directly in a simple format the API can accept
+      // Store player names for our UI
       playerNames: data.players,
-      // Leave the players field empty as it might be a relation field that needs special handling
-      // or handle it differently based on the API requirements
+      // Add the players field that the API requires
+      players: playerIds,
       isActive: true,
       userId: data.userId
     };
