@@ -122,7 +122,7 @@ const GamesList = ({
     if (hasPlayers) {
       fetchPlayerNames();
     }
-  }, [activeGames, completedGames]);
+  }, [activeGames, completedGames, playerNameCache]);
   
   const formatPlayersList = (players: string[]) => {
     if (!players || players.length === 0) {

@@ -75,49 +75,35 @@ export const getUsersByIds = async (userIds: string[]) => {
     
     console.log("Valid user IDs:", validUserIds);
     
-    // PocketBase's filter syntax for ID lists needs double quotes
-    // First build a comma-separated list of user IDs with double quotes
-    let filterStr = validUserIds.map(id => `"${id}"`).join(',');
-    const filter = validUserIds.length === 1 
-      ? `id = "${validUserIds[0]}"` 
-      : `id IN [${filterStr}]`;
+    // Instead of using the IN filter which seems to cause issues,
+    // we'll fetch each user individually and combine the results
+    const userPromises = validUserIds.map(id => 
+      pb.collection('users').getOne(id, {
+        fields: 'id,username,email,name,avatar'
+      }).catch(err => {
+        console.log(`Error fetching user ${id}:`, err);
+        // Return a fallback user object on error
+        return {
+          id: id,
+          username: `User-${id.substring(0, 5)}`,
+          email: '',
+          name: `User-${id.substring(0, 5)}`,
+          avatar: null
+        };
+      })
+    );
     
-    console.log("Fetching users with filter:", filter);
-    
-    const records = await pb.collection('users').getList(1, validUserIds.length, {
-      filter: filter,
-      fields: 'id,username,email,name,avatar'
-    });
-    
-    console.log(`Found ${records.items.length} users for ${validUserIds.length} IDs`);
+    const userRecords = await Promise.all(userPromises);
+    console.log(`Found ${userRecords.length} users for ${validUserIds.length} IDs`);
     
     // Map the raw records to our consistent user object format
-    const users = records.items.map(user => ({
+    const users = userRecords.map(user => ({
       id: user.id,
       username: user.username,
       email: user.email,
       name: user.name || user.username, // Fallback to username if name is not available
       avatar: user.avatar ? `${pb.baseUrl}/api/files/users/${user.id}/avatar?t=${Date.now()}` : null
     }));
-    
-    // Log if any IDs weren't found
-    const foundIds = new Set(users.map(u => u.id));
-    const missingIds = validUserIds.filter(id => !foundIds.has(id));
-    
-    if (missingIds.length > 0) {
-      console.warn("Some user IDs were not found:", missingIds);
-      
-      // For missing IDs, provide fallback data
-      const fallbackUsers = missingIds.map(id => ({
-        id: id,
-        username: `User-${id.substring(0, 5)}`,
-        email: '',
-        name: `User-${id.substring(0, 5)}`,
-        avatar: null
-      }));
-      
-      users.push(...fallbackUsers);
-    }
     
     console.log("Returning user data:", users);
     return users;
