@@ -37,11 +37,10 @@
 
     --radius: 0.5rem;
   }
-}
-
-@layer base {
-  * {
-    @apply border-border;
+  
+  html, body, #root {
+    height: 100%;
+    overflow: hidden;
   }
 
   body {
@@ -172,7 +171,8 @@
 
 /* Fix for the game board height */
 .h-[60vh], .h-[65vh] {
-  min-height: 500px;
+  min-height: min(500px, 60vh);
+  max-height: 65vh;
 }
 
 /* Make sure tiles are clearly visible and interactive */

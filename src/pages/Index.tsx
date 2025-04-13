@@ -7,7 +7,7 @@ const Index = () => {
   const { isAuthenticated } = useAuth();
 
   return (
-    <div className="min-h-screen bg-[#0F1624] text-white overflow-hidden">
+    <div className="h-screen bg-[#0F1624] text-white overflow-hidden">
       {isAuthenticated ? (
         <Game />
       ) : (
