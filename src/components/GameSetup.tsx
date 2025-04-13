@@ -30,6 +30,7 @@ interface GameData {
   yourScore?: number;
   winner?: string;
   userId: string;
+  name?: string;
 }
 
 const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
@@ -60,6 +61,7 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
     
     try {
       const data = {
+        name: `Leikur ${new Date().toLocaleString('is-IS')}`,
         players: playerNames.slice(0, playerCount),
         isActive: true,
         userId: user.id
@@ -86,8 +88,8 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
       setShowNewGame(false);
       if (data) {
         onStartGame(
-          data.players.length, 
-          data.players
+          playerCount, 
+          playerNames.slice(0, playerCount)
         );
       }
       toast({
