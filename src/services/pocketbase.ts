@@ -92,21 +92,34 @@ export const createNewGame = async (data) => {
     const gameData = {
       name: data.name || `Game ${new Date().toLocaleString('is-IS')}`,
       created_by: currentUser.id,
-      current_player_index: 0,
+      current_player_index: 0, // Explicitly set this to 0 (first player's turn)
       status: "in_progress",
       // Store player names in a separate field for our UI
       playerNames: data.playerNames,
       // The players field must be a valid relation to user IDs
-      players: [currentUser.id],
+      players: [currentUser.id], // Include only the current user as a player
       isActive: true,
       userId: currentUser.id
     };
     
     console.log("Sending formatted game data:", gameData);
     
-    const record = await pb.collection('games').create(gameData);
-    console.log("Game created successfully:", record);
-    return record;
+    try {
+      // First attempt with the players array as is
+      const record = await pb.collection('games').create(gameData);
+      console.log("Game created successfully:", record);
+      return record;
+    } catch (firstError) {
+      console.error('First attempt error:', firstError);
+      
+      // If that fails, try without including selectedUsers - include only the currentUser
+      console.log("Retrying with only current user in players array");
+      gameData.players = [currentUser.id];
+      
+      const record = await pb.collection('games').create(gameData);
+      console.log("Game created successfully on second attempt:", record);
+      return record;
+    }
   } catch (error) {
     console.error('Error creating game:', error);
     throw error;
