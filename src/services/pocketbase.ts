@@ -1,4 +1,3 @@
-
 import PocketBase from 'pocketbase';
 import { GameState } from '@/utils/gameLogic';
 
@@ -26,27 +25,20 @@ export const fetchUserGames = async (userId) => {
   if (!userId) return { activeGames: [], completedGames: [] };
   
   try {
-    // Fetch all games and filter on the client side
+    // Updated filter to use created_by instead of userId
     const records = await pb.collection('games').getList(1, 50, {
       sort: '-created',
-      expand: 'players',
+      filter: `created_by = "${userId}" || players ~ "${userId}"`,
     });
     
-    // Filter games by user ID in the client
-    const userGames = records.items.filter(game => 
-      game.created_by === userId || 
-      game.userId === userId || 
-      (game.players && game.players.includes(userId))
-    );
-    
-    const games = userGames.map(item => ({
+    const games = records.items.map(item => ({
       id: item.id,
       created: item.created,
       players: item.playerNames || [], // Use playerNames as fallback
       isActive: item.status === 'in_progress', 
       yourScore: item.yourScore,
       winner: item.winner,
-      userId: item.created_by || item.userId,
+      userId: item.created_by,
       name: item.name
     }));
     

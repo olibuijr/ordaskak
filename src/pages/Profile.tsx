@@ -1,3 +1,4 @@
+
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -38,10 +39,10 @@ const Profile = () => {
       if (!user?.id) return { games: [], winRatio: 0, totalGames: 0, wins: 0 };
       
       try {
+        // Fix the filter parameter - using created_by instead of userId and removing isActive filter
         const games = await pb.collection('games').getList(1, 20, {
-          filter: `userId = "${user.id}" && isActive = false`,
-          sort: '-created',
-          expand: 'userId'
+          filter: `created_by = "${user.id}" || players ~ "${user.id}"`,
+          sort: '-created'
         });
 
         let wins = 0;
@@ -251,7 +252,7 @@ const Profile = () => {
                             {userStats.games.map((game: any) => (
                               <TableRow key={game.id} className="hover:bg-game-dark/50">
                                 <TableCell>{formatDate(game.created)}</TableCell>
-                                <TableCell>{game.players?.join(', ') || '-'}</TableCell>
+                                <TableCell>{game.playerNames?.join(', ') || game.players?.join(', ') || '-'}</TableCell>
                                 <TableCell>
                                   {game.winner === user?.name || game.winner === user?.username ? (
                                     <span className="text-game-accent-green font-medium">Þú vannst!</span>
