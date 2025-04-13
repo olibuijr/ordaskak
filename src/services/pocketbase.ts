@@ -65,23 +65,34 @@ export const createNewGame = async (data) => {
     const gameData = {
       name: data.name || `Game ${new Date().toLocaleString('is-IS')}`,
       created_by: data.userId,
-      // For the current_player_index, API seems to expect it as a numeric field
+      // The current_player_index must be sent as a number (0)
       current_player_index: 0,
       status: "in_progress",
-      // Store player names for our UI
+      // Store player names in a separate field for our UI
       playerNames: data.players,
-      // The API requires a 'players' field, and it appears to be a required field
-      // Create a simple array for now
-      players: ["player1"],
+      // Since the 'players' field requires valid relation records and we don't have them,
+      // we'll omit this field and let the API handle the default values or send an empty array
+      // which is more likely to work than invalid relation ids
+      players: [],
       isActive: true,
       userId: data.userId
     };
     
     console.log("Sending formatted game data:", gameData);
     
-    const record = await pb.collection('games').create(gameData);
-    console.log("Game created successfully:", record);
-    return record;
+    // First try with players as empty array
+    try {
+      const record = await pb.collection('games').create(gameData);
+      console.log("Game created successfully:", record);
+      return record;
+    } catch (err) {
+      // If that fails, try without the players field entirely
+      delete gameData.players;
+      console.log("Retrying without players field:", gameData);
+      const record = await pb.collection('games').create(gameData);
+      console.log("Game created successfully on retry:", record);
+      return record;
+    }
   } catch (error) {
     console.error('Error creating game:', error);
     throw error;
