@@ -40,7 +40,7 @@ const ScoreBoard: React.FC<ScoreBoardProps> = ({ players, tilesRemaining }) => {
         </div>
         
         <div className="mt-4 flex justify-between border-t border-game-accent-blue/20 pt-4">
-          <span className="text-muted-foreground">Tiles remaining</span>
+          <span className="text-muted-foreground">Stafir eftir</span>
           <span className="font-semibold">{tilesRemaining}</span>
         </div>
       </CardContent>

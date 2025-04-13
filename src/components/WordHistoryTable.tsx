@@ -24,11 +24,11 @@ const WordHistoryTable: React.FC<WordHistoryTableProps> = ({ words }) => {
     return (
       <Card className="bg-game-light/40 backdrop-blur-md border-game-accent-blue/30">
         <CardHeader>
-          <CardTitle className="text-lg">Word History</CardTitle>
+          <CardTitle className="text-lg">Orðasaga</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-sm text-muted-foreground text-center py-4">
-            No words played yet
+            Engin orð spiluð enn
           </div>
         </CardContent>
       </Card>
@@ -38,15 +38,15 @@ const WordHistoryTable: React.FC<WordHistoryTableProps> = ({ words }) => {
   return (
     <Card className="bg-game-light/40 backdrop-blur-md border-game-accent-blue/30">
       <CardHeader>
-        <CardTitle className="text-lg">Word History</CardTitle>
+        <CardTitle className="text-lg">Orðasaga</CardTitle>
       </CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Word</TableHead>
-              <TableHead>Player</TableHead>
-              <TableHead className="text-right">Points</TableHead>
+              <TableHead>Orð</TableHead>
+              <TableHead>Leikmaður</TableHead>
+              <TableHead className="text-right">Stig</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

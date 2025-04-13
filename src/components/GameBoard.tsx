@@ -20,19 +20,19 @@ const GameBoard: React.FC<GameBoardProps> = ({ board, onCellClick }) => {
             switch (cell.bonus) {
               case 'dl':
                 bonusClass = 'bg-[#4A7FBA] text-white';
-                label = 'DL';
+                label = 'TS';
                 break;
               case 'tl':
                 bonusClass = 'bg-[#396592] text-white';
-                label = 'TL';
+                label = 'ÞS';
                 break;
               case 'dw':
                 bonusClass = 'bg-[#9D5884] text-white';
-                label = 'DW';
+                label = 'TO';
                 break;
               case 'tw':
                 bonusClass = 'bg-[#8B3E3E] text-white';
-                label = 'TW';
+                label = 'ÞO';
                 break;
               case 'star':
                 bonusClass = 'bg-[#FFD700]/80 text-[#1A1F2C]';

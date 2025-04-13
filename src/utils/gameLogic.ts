@@ -1,4 +1,3 @@
-
 export interface Tile {
   id: string;
   letter: string;
@@ -215,11 +214,56 @@ export const initializeGame = (playerCount: number, playerNames: string[] = []):
 
 export const getBonusDescription = (bonus: string): string => {
   switch (bonus) {
-    case 'dl': return 'Double Letter';
-    case 'tl': return 'Triple Letter';
-    case 'dw': return 'Double Word';
-    case 'tw': return 'Triple Word';
-    case 'star': return 'Center Star';
+    case 'dl': return 'Tvöfaldur stafur';
+    case 'tl': return 'Þrefaldur stafur';
+    case 'dw': return 'Tvöfalt orð';
+    case 'tw': return 'Þrefalt orð';
+    case 'star': return 'Miðjureitur';
     default: return '';
   }
+};
+
+// Calculate score for placed tiles, accounting for bonus squares
+export const calculateWordScore = (
+  board: BoardCell[][],
+  placedTiles: PlacedTile[],
+  allTilesInWord: { x: number, y: number }[]
+): number => {
+  let letterScore = 0;
+  let wordMultiplier = 1;
+  
+  // First pass: Calculate letter scores including letter multipliers
+  for (const position of allTilesInWord) {
+    const { x, y } = position;
+    const cell = board[y][x];
+    
+    if (cell.tile) {
+      let tileValue = cell.tile.value;
+      
+      // Check if this is a newly placed tile that landed on a bonus square
+      const isNewTile = placedTiles.some(tile => tile.x === x && tile.y === y);
+      
+      if (isNewTile) {
+        // Apply letter multipliers for newly placed tiles
+        if (cell.bonus === 'dl') {
+          tileValue *= 2;
+        } else if (cell.bonus === 'tl') {
+          tileValue *= 3;
+        } else if (cell.bonus === 'dw') {
+          // Store word multiplier for second pass
+          wordMultiplier *= 2;
+        } else if (cell.bonus === 'tw') {
+          // Store word multiplier for second pass
+          wordMultiplier *= 3;
+        }
+      }
+      
+      letterScore += tileValue;
+    }
+  }
+  
+  // Second pass: Apply word multipliers
+  const totalScore = letterScore * wordMultiplier;
+  
+  return totalScore;
 };

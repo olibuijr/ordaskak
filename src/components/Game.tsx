@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import GameBoard from './GameBoard';
 import PlayerRack from './PlayerRack';
@@ -12,7 +11,8 @@ import {
   Tile, 
   PlacedTile,
   shuffleArray,
-  drawTiles
+  drawTiles,
+  calculateWordScore
 } from '@/utils/gameLogic';
 import { useToast } from '@/components/ui/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -37,21 +37,20 @@ const Game: React.FC = () => {
     console.log("Initial game state:", newGameState);
     setGameState(newGameState);
     toast({
-      title: "Game Started",
-      description: `Starting a new game with ${playerCount} players`,
+      title: "Leikur hafinn",
+      description: `Nýr leikur hefst með ${playerCount} leikmönnum`,
     });
   };
   
   const handleTileClick = (tile: Tile) => {
     console.log("Tile clicked:", tile);
-    // Toggle selection
     if (selectedTile?.id === tile.id) {
       setSelectedTile(null);
     } else {
       setSelectedTile(tile);
       toast({
-        title: "Tile Selected",
-        description: `Selected tile ${tile.letter || 'Blank'}. Click on the board to place it.`,
+        title: "Stafur valinn",
+        description: `Valdir stafinn ${tile.letter || 'Auður'}. Smelltu á borðið til að leggja hann niður.`,
       });
     }
   };
@@ -61,37 +60,31 @@ const Game: React.FC = () => {
     if (!gameState || !selectedTile) {
       if (!selectedTile) {
         toast({
-          title: "No tile selected",
-          description: "Please select a tile from your rack first",
+          title: "Enginn stafur valinn",
+          description: "Vinsamlegast veldu staf úr rekkanum þínum fyrst",
           variant: "destructive",
         });
       }
       return;
     }
     
-    // Check if the cell already has a tile
     if (gameState.board[y][x].tile) {
       toast({
-        title: "Cell occupied",
-        description: "This cell already has a tile",
+        title: "Reitur upptekinn",
+        description: "Þessi reitur er nú þegar með staf",
         variant: "destructive",
       });
       return;
     }
     
-    // Create a copy of the game state
     const newGameState = { ...gameState };
-    
-    // Get the current player
     const currentPlayer = newGameState.players[newGameState.currentPlayerIndex];
     
-    // Remove the tile from the player's rack
     const tileIndex = currentPlayer.rack.findIndex(t => t.id === selectedTile.id);
-    if (tileIndex === -1) return; // Tile not found in rack
+    if (tileIndex === -1) return;
     
     currentPlayer.rack.splice(tileIndex, 1);
     
-    // Create a new placed tile
     const placedTile: PlacedTile = {
       ...selectedTile,
       x,
@@ -99,65 +92,125 @@ const Game: React.FC = () => {
       isNew: true
     };
     
-    // Place the tile on the board
     newGameState.board[y][x].tile = placedTile;
-    
-    // Add to placed tiles array
     newGameState.placedTiles.push(placedTile);
     
-    // Update placed tiles map for easy access
     const newPlacedTilesMap = new Map(placedTilesMap);
     newPlacedTilesMap.set(`${x}-${y}`, placedTile);
     setPlacedTilesMap(newPlacedTilesMap);
     
-    // Clear selection
     setSelectedTile(null);
     
     toast({
-      title: "Tile placed",
-      description: `Placed ${placedTile.letter || 'Blank'} at position (${x+1}, ${y+1})`,
+      title: "Stafur lagður niður",
+      description: `Lagðir ${placedTile.letter || 'Auðan staf'} á stöðu (${x+1}, ${y+1})`,
     });
     
-    // Update game state
     setGameState(newGameState);
   };
   
   const handlePlayWord = function() {
     if (!gameState) return;
     
-    // Here we would validate the word and calculate score
-    // For the demo, we'll just calculate a simple score and proceed to next turn
-    
     const newGameState = { ...gameState };
     const currentPlayer = newGameState.players[newGameState.currentPlayerIndex];
     
     if (newGameState.placedTiles.length === 0) {
       toast({
-        title: "No tiles played",
-        description: "You need to place at least one tile to play a word",
+        title: "Engir stafir lagðir niður",
+        description: "Þú þarft að leggja niður að minnsta kosti einn staf til að spila orð",
         variant: "destructive",
       });
       return;
     }
     
-    // Simple scoring - just add the value of placed tiles
-    const scoreToAdd = newGameState.placedTiles.reduce((score, tile) => {
-      return score + tile.value;
-    }, 0);
+    let isHorizontal = true;
+    let isVertical = true;
+    const positions = newGameState.placedTiles.map(tile => ({ x: tile.x, y: tile.y }));
     
+    const firstY = positions[0].y;
+    const firstX = positions[0].x;
+    
+    for (const pos of positions) {
+      if (pos.y !== firstY) isHorizontal = false;
+      if (pos.x !== firstX) isVertical = false;
+    }
+    
+    if (!isHorizontal && !isVertical) {
+      toast({
+        title: "Ógilt leggja",
+        description: "Stafirnir þurfa að vera í beinni línu (láréttri eða lóðréttri)",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    let allTilesInWord: { x: number, y: number }[] = [...positions];
+    
+    if (isHorizontal) {
+      positions.sort((a, b) => a.x - b.x);
+      const minX = positions[0].x;
+      const maxX = positions[positions.length - 1].x;
+      const y = positions[0].y;
+      
+      for (let x = minX - 1; x >= 0; x--) {
+        if (newGameState.board[y][x].tile) {
+          allTilesInWord.push({ x, y });
+        } else {
+          break;
+        }
+      }
+      
+      for (let x = maxX + 1; x < 15; x++) {
+        if (newGameState.board[y][x].tile) {
+          allTilesInWord.push({ x, y });
+        } else {
+          break;
+        }
+      }
+      
+      allTilesInWord.sort((a, b) => a.x - b.x);
+    } else if (isVertical) {
+      positions.sort((a, b) => a.y - b.y);
+      const minY = positions[0].y;
+      const maxY = positions[positions.length - 1].y;
+      const x = positions[0].x;
+      
+      for (let y = minY - 1; y >= 0; y--) {
+        if (newGameState.board[y][x].tile) {
+          allTilesInWord.push({ x, y });
+        } else {
+          break;
+        }
+      }
+      
+      for (let y = maxY + 1; y < 15; y++) {
+        if (newGameState.board[y][x].tile) {
+          allTilesInWord.push({ x, y });
+        } else {
+          break;
+        }
+      }
+      
+      allTilesInWord.sort((a, b) => a.y - b.y);
+    }
+    
+    const scoreToAdd = calculateWordScore(newGameState.board, newGameState.placedTiles, allTilesInWord);
     currentPlayer.score += scoreToAdd;
     
-    // Create a word from the newly placed tiles (simplified for demo)
-    const word = newGameState.placedTiles.map(tile => tile.letter).join('');
+    const wordLetters = allTilesInWord.map(pos => {
+      const cell = newGameState.board[pos.y][pos.x];
+      return cell.tile?.letter || '';
+    });
     
-    // Add to word history
+    const word = wordLetters.join('');
+    
     setWordHistory(prev => [...prev, {
       word,
       player: currentPlayer.name,
       score: scoreToAdd
     }]);
     
-    // Draw new tiles for the current player
     const tilesToDraw = 7 - currentPlayer.rack.length;
     if (tilesToDraw > 0 && newGameState.tileBag.length > 0) {
       const { drawn, remaining } = drawTiles(newGameState.tileBag, tilesToDraw);
@@ -165,10 +218,8 @@ const Game: React.FC = () => {
       newGameState.tileBag = remaining;
     }
     
-    // Clear placed tiles
     newGameState.placedTiles = [];
     
-    // Mark all board tiles as no longer 'new'
     for (let y = 0; y < 15; y++) {
       for (let x = 0; x < 15; x++) {
         if (newGameState.board[y][x].tile?.isNew) {
@@ -177,14 +228,13 @@ const Game: React.FC = () => {
       }
     }
     
-    // Move to next player
     currentPlayer.isActive = false;
     newGameState.currentPlayerIndex = (newGameState.currentPlayerIndex + 1) % newGameState.players.length;
     newGameState.players[newGameState.currentPlayerIndex].isActive = true;
     
     toast({
-      title: "Word played",
-      description: `Added ${scoreToAdd} points to ${currentPlayer.name}'s score`,
+      title: "Orð spilað",
+      description: `Bættir ${scoreToAdd} stigum við skor ${currentPlayer.name}`,
     });
     
     setGameState(newGameState);
@@ -197,14 +247,13 @@ const Game: React.FC = () => {
     const newGameState = { ...gameState };
     const currentPlayer = newGameState.players[newGameState.currentPlayerIndex];
     
-    // Shuffle the player's rack
     currentPlayer.rack = shuffleArray(currentPlayer.rack);
     
     setGameState(newGameState);
     
     toast({
-      title: "Tiles shuffled",
-      description: "Your rack has been rearranged",
+      title: "Stöfum blandað",
+      description: "Stöfunum í rekkanum þínum hefur verið endurraðað",
     });
   };
   
@@ -214,19 +263,17 @@ const Game: React.FC = () => {
     const newGameState = { ...gameState };
     const currentPlayer = newGameState.players[newGameState.currentPlayerIndex];
     
-    // Handle any placed tiles - put them back in the rack
     if (newGameState.placedTiles.length > 0) {
       handleRecallTiles();
     }
     
-    // Move to next player
     currentPlayer.isActive = false;
     newGameState.currentPlayerIndex = (newGameState.currentPlayerIndex + 1) % newGameState.players.length;
     newGameState.players[newGameState.currentPlayerIndex].isActive = true;
     
     toast({
-      title: "Turn passed",
-      description: `Now it's ${newGameState.players[newGameState.currentPlayerIndex].name}'s turn`,
+      title: "Umferð sleppt",
+      description: `Núna er röðin á ${newGameState.players[newGameState.currentPlayerIndex].name}`,
     });
     
     setGameState(newGameState);
@@ -238,9 +285,7 @@ const Game: React.FC = () => {
     const newGameState = { ...gameState };
     const currentPlayer = newGameState.players[newGameState.currentPlayerIndex];
     
-    // Return all newly placed tiles to the rack
     for (const placedTile of newGameState.placedTiles) {
-      // Add tile back to rack
       currentPlayer.rack.push({
         id: placedTile.id,
         letter: placedTile.letter,
@@ -248,16 +293,14 @@ const Game: React.FC = () => {
         isBlank: placedTile.isBlank
       });
       
-      // Remove from board
       newGameState.board[placedTile.y][placedTile.x].tile = null;
     }
     
-    // Clear placed tiles
     newGameState.placedTiles = [];
     
     toast({
-      title: "Tiles recalled",
-      description: "All placed tiles have been returned to your rack",
+      title: "Stöfum skilað",
+      description: "Allir lagðir stafir hafa verið skráðir aftur í rekkann þinn",
     });
     
     setGameState(newGameState);
@@ -273,13 +316,11 @@ const Game: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-6 flex flex-col gap-6 min-h-screen">
       <div className="flex flex-col lg:flex-row gap-6">
-        {/* Main game section */}
         <div className="lg:w-3/4 flex flex-col">
           <h2 className="text-2xl font-bold mb-3 text-game-accent-blue">
-            {currentPlayer.name}'s Turn
+            {currentPlayer.name} á leik
           </h2>
           
-          {/* 2D Game board */}
           <div className="h-[60vh] md:h-[65vh] relative rounded-lg overflow-hidden border border-game-accent-blue/30 bg-game-dark">
             <GameBoard 
               board={gameState.board} 
@@ -287,14 +328,12 @@ const Game: React.FC = () => {
             />
           </div>
           
-          {/* Instructions */}
           <div className="mt-3 mb-2 text-center text-sm text-white/70">
             {selectedTile 
-              ? "Click on the board to place your selected tile" 
-              : "Select a tile from your rack to play"}
+              ? "Smelltu á borðið til að leggja niður valinn staf" 
+              : "Veldu staf úr rekkanum þínum til að spila"}
           </div>
           
-          {/* Player rack */}
           <div className="mt-2">
             <PlayerRack
               tiles={currentPlayer.rack}
@@ -314,14 +353,12 @@ const Game: React.FC = () => {
           </div>
         </div>
         
-        {/* Sidebar */}
         <div className="lg:w-1/4 flex flex-col gap-4">
           <ScoreBoard
             players={gameState.players}
             tilesRemaining={gameState.tileBag.length}
           />
           
-          {/* Word history table */}
           <WordHistoryTable words={wordHistory} />
         </div>
       </div>

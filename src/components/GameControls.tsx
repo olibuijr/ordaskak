@@ -29,7 +29,7 @@ const GameControls: React.FC<GameControlsProps> = ({
         className="bg-game-accent-blue hover:bg-game-accent-blue/80 text-black flex gap-2"
       >
         <Play size={18} />
-        <span>Play Word</span>
+        <span>Spila orð</span>
       </Button>
       
       <Button 
@@ -38,7 +38,7 @@ const GameControls: React.FC<GameControlsProps> = ({
         className="border-game-accent-blue text-game-accent-blue hover:bg-game-accent-blue/20 flex gap-2"
       >
         <Shuffle size={18} />
-        <span>Shuffle</span>
+        <span>Blanda</span>
       </Button>
       
       <Button 
@@ -47,7 +47,7 @@ const GameControls: React.FC<GameControlsProps> = ({
         className="border-game-accent-purple text-game-accent-purple hover:bg-game-accent-purple/20 flex gap-2"
       >
         <RotateCcw size={18} />
-        <span>Recall</span>
+        <span>Taka til baka</span>
       </Button>
       
       <Button 
@@ -56,7 +56,7 @@ const GameControls: React.FC<GameControlsProps> = ({
         className="border-game-accent-pink text-game-accent-pink hover:bg-game-accent-pink/20 flex gap-2"
       >
         <SkipForward size={18} />
-        <span>Pass</span>
+        <span>Sleppa</span>
       </Button>
     </div>
   );
