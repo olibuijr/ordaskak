@@ -84,6 +84,9 @@ const Game: React.FC = () => {
         console.log("Player IDs from database:", playerIds);
         console.log("Player names from database:", playerNames);
         
+        const playerRacks = await getPlayerRacks(id, playerIds);
+        console.log("Retrieved player racks from database:", playerRacks);
+        
         const playersArray = [];
         
         for (let i = 0; i < playerIds.length; i++) {
@@ -102,11 +105,13 @@ const Game: React.FC = () => {
             }
           }
           
+          const playerRack = playerRacks && playerRacks[playerId] ? playerRacks[playerId] : [];
+          
           playersArray.push({
             id: playerId,
             name: playerName,
             score: 0,
-            rack: [],
+            rack: playerRack,
             isAI: false,
             isActive: false
           });
@@ -123,7 +128,7 @@ const Game: React.FC = () => {
         });
         
         console.log("Current player index:", currentPlayerIndex);
-        console.log("Players array:", playersArray);
+        console.log("Players array with racks:", playersArray);
         
         let boardState;
         try {
@@ -136,20 +141,10 @@ const Game: React.FC = () => {
         let tileBagState;
         try {
           tileBagState = record.tile_bag ? JSON.parse(record.tile_bag) : createTileBag();
+          console.log("Loaded tile bag from database:", tileBagState);
         } catch (e) {
           console.error("Error parsing tile bag:", e);
           tileBagState = createTileBag();
-        }
-        
-        const playerRacks = await getPlayerRacks(id, playerIds);
-        
-        if (playerRacks) {
-          playersArray.forEach(player => {
-            if (playerRacks[player.id] && playerRacks[player.id].length > 0) {
-              console.log(`Using saved rack for player ${player.id}:`, playerRacks[player.id]);
-              player.rack = playerRacks[player.id];
-            }
-          });
         }
         
         const loadedGameState: GameState = {
@@ -169,10 +164,13 @@ const Game: React.FC = () => {
         
         for (let i = 0; i < updatedGameState.players.length; i++) {
           if (!updatedGameState.players[i].rack || updatedGameState.players[i].rack.length === 0) {
+            console.log(`Player ${updatedGameState.players[i].name} needs new tiles`);
             const { drawn, remaining } = drawTiles(updatedGameState.tileBag, 7);
             updatedGameState.players[i].rack = drawn;
             updatedGameState.tileBag = remaining;
             needUpdate = true;
+          } else {
+            console.log(`Player ${updatedGameState.players[i].name} already has tiles:`, updatedGameState.players[i].rack);
           }
         }
         
@@ -205,7 +203,9 @@ const Game: React.FC = () => {
         setGameState(updatedGameState);
         
         if (needUpdate) {
+          console.log("Updating game state because some players needed new tiles");
           updateGameBoardState(id, updatedGameState);
+          updatePlayerRacks(id, updatedGameState.players, updatedGameState.tileBag);
         }
       } else {
         toast({

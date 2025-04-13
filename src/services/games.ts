@@ -221,6 +221,42 @@ export const updatePlayerRacks = async (gameId, players, tileBag) => {
   }
 };
 
+// Retrieve player racks from the database to maintain consistency
+export const getPlayerRacks = async (gameId, playerIds) => {
+  try {
+    if (!gameId || !playerIds || playerIds.length === 0) {
+      console.error("Cannot retrieve player racks: Invalid parameters");
+      return null;
+    }
+    
+    const record = await pb.collection('games').getOne(gameId);
+    if (!record) {
+      console.error("Game record not found when retrieving player racks:", gameId);
+      return null;
+    }
+    
+    const playerRacks = {};
+    playerIds.forEach(playerId => {
+      const rackKey = `player_${playerId}_rack`;
+      if (record[rackKey]) {
+        try {
+          playerRacks[playerId] = JSON.parse(record[rackKey]);
+        } catch (e) {
+          console.error(`Error parsing rack for player ${playerId}:`, e);
+          playerRacks[playerId] = [];
+        }
+      } else {
+        playerRacks[playerId] = [];
+      }
+    });
+    
+    return playerRacks;
+  } catch (error) {
+    console.error("Error retrieving player racks:", error);
+    return null;
+  }
+};
+
 // Update the board state in the games collection
 export const updateGameBoardState = async (gameId, gameState) => {
   try {
