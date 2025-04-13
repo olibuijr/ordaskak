@@ -43,10 +43,7 @@ const GamesList = ({
   const [isLoading, setIsLoading] = useState(false);
   
   const isValidPlayerId = (id: any): boolean => {
-    return typeof id === 'string' && 
-           id.length > 0 && 
-           id.length <= 36 && 
-           id.includes('-');
+    return typeof id === 'string' && id.length > 0;
   };
   
   useEffect(() => {
@@ -129,7 +126,7 @@ const GamesList = ({
         return playerNameCache[playerId];
       }
       
-      return isLoading ? "Hleður..." : "Unknown Player";
+      return isLoading ? "Hleður..." : "Player-" + playerId.substring(0, 5);
     }).join(', ');
   };
   
@@ -180,7 +177,7 @@ const GamesList = ({
                             if (!isValidPlayerId(playerId)) {
                               return playerId;
                             }
-                            return playerNameCache[playerId] || 'Unknown Player';
+                            return playerNameCache[playerId] || `Player-${playerId.substring(0, 5)}`;
                           });
                           
                           onStartGame(

@@ -57,10 +57,18 @@ export const getUsersByIds = async (userIds: string[]) => {
   if (!userIds || userIds.length === 0) return [];
   
   try {
-    // Filter out any invalid IDs
-    const validUserIds = userIds.filter(id => 
-      typeof id === 'string' && id.length > 0 && id.length <= 36 && id.includes('-')
-    );
+    console.log("Starting getUsersByIds with IDs:", userIds);
+    
+    // Check for valid IDs and filter out any invalid ones
+    const validUserIds = userIds.filter(id => {
+      if (!id || typeof id !== 'string') {
+        console.warn(`Invalid user ID type: ${typeof id}`);
+        return false;
+      }
+      
+      // Don't apply strict validation as it may exclude valid PocketBase IDs
+      return id.length > 0;
+    });
     
     if (validUserIds.length === 0) {
       console.warn("No valid user IDs provided to getUsersByIds");
@@ -69,9 +77,10 @@ export const getUsersByIds = async (userIds: string[]) => {
     
     console.log("Valid user IDs:", validUserIds);
     
-    // Use the expanded filter syntax for multiple IDs
-    // This is more reliable than the OR operator
-    const filter = `id ?= "${validUserIds.join('","')}"`;
+    // PocketBase's filter syntax for ID lists
+    const filter = validUserIds.length === 1 
+      ? `id = "${validUserIds[0]}"` 
+      : `id ?~ "${validUserIds.join('","')}"`;
     
     console.log("Fetching users with filter:", filter);
     
@@ -97,12 +106,32 @@ export const getUsersByIds = async (userIds: string[]) => {
     
     if (missingIds.length > 0) {
       console.warn("Some user IDs were not found:", missingIds);
+      
+      // For missing IDs, provide fallback data to prevent UI issues
+      const fallbackUsers = missingIds.map(id => ({
+        id: id,
+        username: `Player-${id.substring(0, 5)}`,
+        email: '',
+        name: `Player-${id.substring(0, 5)}`,
+        avatar: null
+      }));
+      
+      users.push(...fallbackUsers);
     }
     
+    console.log("Returning user data:", users);
     return users;
   } catch (error) {
     console.error('Error batch fetching users:', error);
     console.error('Error details:', error);
-    return [];
+    
+    // Return fallback data for all requested IDs to prevent UI issues
+    return userIds.map((id, index) => ({
+      id: id || `unknown-${index}`,
+      username: `Player-${index + 1}`,
+      email: '',
+      name: `Player-${index + 1}`,
+      avatar: null
+    }));
   }
 };
