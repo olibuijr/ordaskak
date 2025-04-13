@@ -16,6 +16,12 @@ import {
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
 
+  // Create a proper avatar URL with a timestamp to prevent caching
+  const getAvatarUrl = () => {
+    if (!user?.id) return '';
+    return `${pb.baseUrl}/api/files/users/${user.id}/avatar?t=${Date.now()}`;
+  };
+
   return (
     <nav className="bg-game-dark/60 backdrop-blur-md border-b border-game-accent-blue/20 py-3 px-4 h-14">
       <div className="container mx-auto flex justify-between items-center">
@@ -30,7 +36,7 @@ const Navbar = () => {
                 <Button variant="ghost" className="p-1 h-10 w-10 rounded-full hover:bg-game-dark/50">
                   <Avatar className="h-8 w-8 border border-game-accent-blue/30">
                     <AvatarImage 
-                      src={user?.id ? `${pb.baseUrl}/api/files/users/${user.id}/avatar` : ''} 
+                      src={getAvatarUrl()} 
                       alt={user?.username} 
                     />
                     <AvatarFallback className="bg-game-dark text-game-accent-blue">

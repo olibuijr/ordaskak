@@ -14,6 +14,7 @@ type AuthContextType = {
   isLoading: boolean;
   isAuthenticated: boolean;
   logout: () => void;
+  refreshUser: () => void;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -21,6 +22,7 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   isAuthenticated: false,
   logout: () => {},
+  refreshUser: () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -29,8 +31,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // Load initial auth state
+  const refreshUser = () => {
     const authUser = getCurrentUser();
     if (authUser) {
       setUser({
@@ -40,6 +41,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         name: authUser.name,
       });
     }
+  };
+
+  useEffect(() => {
+    // Load initial auth state
+    refreshUser();
     setIsLoading(false);
 
     // Listen for auth state changes
@@ -70,6 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         isAuthenticated: !!user,
         logout,
+        refreshUser,
       }}
     >
       {children}

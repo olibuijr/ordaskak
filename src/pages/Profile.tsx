@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -7,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { pb } from "@/services/pocketbase";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "@/components/ui/use-toast";
 import { 
   Table,
@@ -22,11 +21,17 @@ import { ArrowLeft, UserCircle, Upload } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Profile = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, refreshUser } = useAuth();
   const [displayName, setDisplayName] = useState(user?.name || "");
   const [avatar, setAvatar] = useState<File | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string>('');
 
-  // Fetch user stats
+  useEffect(() => {
+    if (user?.id) {
+      setAvatarUrl(`${pb.baseUrl}/api/files/users/${user.id}/avatar?t=${Date.now()}`);
+    }
+  }, [user?.id]);
+
   const { data: userStats, isLoading: statsLoading } = useQuery({
     queryKey: ["userStats", user?.id],
     queryFn: async () => {
@@ -39,7 +44,6 @@ const Profile = () => {
           expand: 'userId'
         });
 
-        // Calculate win ratio
         let wins = 0;
         games.items.forEach(game => {
           if (game.winner === user.name || game.winner === user.username) {
@@ -63,7 +67,6 @@ const Profile = () => {
     enabled: !!user?.id,
   });
 
-  // Update profile mutation
   const updateProfile = useMutation({
     mutationFn: async () => {
       if (!user) return null;
@@ -82,8 +85,16 @@ const Profile = () => {
         title: "Uppfært!",
         description: "Notandaupplýsingar þínar hafa verið uppfærðar.",
       });
-      // Refresh the page to show updated user info
-      window.location.reload();
+      
+      if (refreshUser) {
+        refreshUser();
+      }
+      
+      if (user?.id) {
+        setAvatarUrl(`${pb.baseUrl}/api/files/users/${user.id}/avatar?t=${Date.now()}`);
+      }
+      
+      setAvatar(null);
     },
     onError: (error) => {
       console.error('Error updating profile:', error);
@@ -148,7 +159,7 @@ const Profile = () => {
                   ) : (
                     <>
                       <AvatarImage 
-                        src={user?.id ? `${pb.baseUrl}/api/files/users/${user.id}/avatar` : ''} 
+                        src={avatarUrl} 
                         alt={user?.username} 
                       />
                       <AvatarFallback className="bg-game-dark text-game-accent-blue text-xl">
