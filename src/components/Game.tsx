@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useGameState } from '@/hooks/useGameState';
 import GameSetup from './GameSetup';
 import GameLoading from './game/GameLoading';
@@ -9,6 +9,7 @@ import { useLocation } from 'react-router-dom';
 
 const Game: React.FC = () => {
   const location = useLocation();
+  const [showInitialLoading, setShowInitialLoading] = useState(true);
   
   // Extract game ID from URL
   const getGameIdFromUrl = () => {
@@ -40,16 +41,29 @@ const Game: React.FC = () => {
   useEffect(() => {
     const gameId = getGameIdFromUrl();
     console.log("Game component mounted, extracted game ID:", gameId);
+    
     if (gameId) {
       setGameId(gameId);
       fetchExistingGame(gameId);
     } else {
       console.log("No game ID found in URL, showing game setup");
+      // If no game ID, we shouldn't show loading state
+      setShowInitialLoading(false);
     }
   }, [location]);
 
-  // Show detailed loading state for debugging
-  if (isLoading || isInitialLoad) {
+  // Hide initial loading after a short delay when no game ID
+  useEffect(() => {
+    if (!getGameIdFromUrl()) {
+      const timer = setTimeout(() => {
+        setShowInitialLoading(false);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  // Show loading state only if we're loading a specific game
+  if (isLoading || (isInitialLoad && getGameIdFromUrl() && showInitialLoading)) {
     console.log("Game is in loading state:", { isLoading, isInitialLoad });
     return <GameLoading message={`Hleð leik... ${getGameIdFromUrl() || ''}`} />;
   }
