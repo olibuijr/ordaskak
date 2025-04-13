@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import GameBoard from './GameBoard';
 import PlayerRack from './PlayerRack';
@@ -16,6 +17,7 @@ import {
 } from '@/utils/gameLogic';
 import { useToast } from '@/components/ui/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Game: React.FC = () => {
   const [gameState, setGameState] = useState<GameState | null>(null);
@@ -24,6 +26,7 @@ const Game: React.FC = () => {
   const [wordHistory, setWordHistory] = useState<Array<{word: string, player: string, score: number}>>([]);
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const { user } = useAuth();
   
   useEffect(() => {
     if (gameState) {
@@ -31,9 +34,17 @@ const Game: React.FC = () => {
     }
   }, [gameState]);
   
+  // Make sure we initialize with the correct player ID
   const handleStartGame = (playerCount: number, playerNames: string[]) => {
     console.log("Starting game with", playerCount, "players");
+    // Make sure the first player ID matches the current user's ID
     const newGameState = initializeGame(playerCount, playerNames);
+    
+    // Set the current player ID if user is logged in
+    if (user) {
+      newGameState.players[0].id = user.id;
+    }
+    
     console.log("Initial game state:", newGameState);
     setGameState(newGameState);
     toast({

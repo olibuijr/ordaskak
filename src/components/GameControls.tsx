@@ -22,7 +22,13 @@ const GameControls: React.FC<GameControlsProps> = ({
   canPlay
 }) => {
   const { user } = useAuth();
-  const isCurrentPlayerUser = user && currentPlayer.name === user.username;
+  
+  // Modified this line to check if the current player matches the user's ID
+  // This allows a user to play when it's their turn
+  const isCurrentPlayerUser = user && (
+    currentPlayer.id === user.id || 
+    currentPlayer.name === user.username
+  );
   
   return (
     <div className="flex flex-col gap-2 md:flex-row md:gap-4 justify-center mt-4">
