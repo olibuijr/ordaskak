@@ -57,8 +57,18 @@ export const getUsersByIds = async (userIds: string[]) => {
   if (!userIds || userIds.length === 0) return [];
   
   try {
+    // Filter out any invalid IDs
+    const validUserIds = userIds.filter(id => 
+      typeof id === 'string' && id.length > 0 && id.length <= 36 && id.includes('-')
+    );
+    
+    if (validUserIds.length === 0) {
+      console.warn("No valid user IDs provided to getUsersByIds");
+      return [];
+    }
+    
     // Create a filter to get all users with IDs in the provided array
-    const filter = userIds.map(id => `id = "${id}"`).join(' || ');
+    const filter = validUserIds.map(id => `id = "${id}"`).join(' || ');
     
     console.log("Fetching users with filter:", filter);
     
@@ -67,15 +77,26 @@ export const getUsersByIds = async (userIds: string[]) => {
       fields: 'id,username,email,name,avatar'
     });
     
-    console.log(`Found ${records.items.length} users for ${userIds.length} IDs`);
+    console.log(`Found ${records.items.length} users for ${validUserIds.length} IDs`);
     
-    return records.items.map(user => ({
+    // Map the raw records to our consistent user object format
+    const users = records.items.map(user => ({
       id: user.id,
       username: user.username,
       email: user.email,
-      name: user.name || user.username,
+      name: user.name || user.username, // Fallback to username if name is not available
       avatar: user.avatar ? `${pb.baseUrl}/api/files/users/${user.id}/avatar?t=${Date.now()}` : null
     }));
+    
+    // Log if any IDs weren't found
+    const foundIds = new Set(users.map(u => u.id));
+    const missingIds = validUserIds.filter(id => !foundIds.has(id));
+    
+    if (missingIds.length > 0) {
+      console.warn("Some user IDs were not found:", missingIds);
+    }
+    
+    return users;
   } catch (error) {
     console.error('Error batch fetching users:', error);
     return [];

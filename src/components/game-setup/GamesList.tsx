@@ -41,6 +41,13 @@ const GamesList = ({
   const [playerNameCache, setPlayerNameCache] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   
+  const isValidPlayerId = (id: any): boolean => {
+    return typeof id === 'string' && 
+           id.length > 0 && 
+           id.length <= 36 && 
+           id.includes('-');
+  };
+  
   useEffect(() => {
     const fetchPlayerNames = async () => {
       const playerIds = new Set<string>();
@@ -48,11 +55,7 @@ const GamesList = ({
       [...activeGames, ...completedGames].forEach(game => {
         if (game.players && Array.isArray(game.players)) {
           game.players.forEach(playerId => {
-            if (typeof playerId === 'string' && 
-                playerId.length > 0 && 
-                playerId.length <= 36 && 
-                playerId.includes('-') && 
-                !playerNameCache[playerId]) {
+            if (isValidPlayerId(playerId) && !playerNameCache[playerId]) {
               playerIds.add(playerId);
             }
           });
@@ -69,15 +72,19 @@ const GamesList = ({
         const users = await getUsersByIds(playerIdsArray);
         console.log("Received user data:", users);
         
-        const newPlayerNames: Record<string, string> = {};
-        users.forEach(user => {
-          if (user && user.id) {
-            newPlayerNames[user.id] = user.name || user.username || 'Unknown Player';
-            console.log(`Mapped ${user.id} to ${newPlayerNames[user.id]}`);
-          }
-        });
-        
-        setPlayerNameCache(prev => ({ ...prev, ...newPlayerNames }));
+        if (users && users.length > 0) {
+          const newPlayerNames: Record<string, string> = {};
+          users.forEach(user => {
+            if (user && user.id) {
+              newPlayerNames[user.id] = user.name || user.username || 'Unknown Player';
+              console.log(`Mapped ${user.id} to ${newPlayerNames[user.id]}`);
+            }
+          });
+          
+          setPlayerNameCache(prev => ({ ...prev, ...newPlayerNames }));
+        } else {
+          console.error("No user data returned from getUsersByIds");
+        }
       } catch (error) {
         console.error("Error fetching player names:", error);
       } finally {
@@ -85,7 +92,13 @@ const GamesList = ({
       }
     };
     
-    fetchPlayerNames();
+    const hasPlayers = [...activeGames, ...completedGames].some(
+      game => game.players && game.players.length > 0
+    );
+    
+    if (hasPlayers) {
+      fetchPlayerNames();
+    }
   }, [activeGames, completedGames]);
   
   const formatPlayersList = (players: string[]) => {
@@ -94,20 +107,15 @@ const GamesList = ({
     }
     
     return players.map(playerId => {
-      if (!playerId || 
-          typeof playerId !== 'string' || 
-          playerId.length > 36 || 
-          !playerId.includes('-')) {
+      if (!isValidPlayerId(playerId)) {
         return playerId;
       }
       
-      const playerName = playerNameCache[playerId];
-      if (playerName) {
-        console.log(`Using cached name for ${playerId}: ${playerName}`);
-      } else {
-        console.log(`No cached name found for ID: ${playerId}`);
+      if (playerNameCache[playerId]) {
+        return playerNameCache[playerId];
       }
-      return playerNameCache[playerId] || 'Loading...';
+      
+      return `Loading player...`;
     }).join(', ');
   };
   
