@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDistanceToNow } from 'date-fns';
-import { CheckCircle2, ShuffleDeck, FastForward } from 'lucide-react';
+import { CheckCircle2, Shuffle, FastForward } from 'lucide-react';
 
 interface GameMove {
   id?: string;
@@ -62,7 +62,7 @@ const WordHistoryTable: React.FC<WordHistoryTableProps> = ({ words }) => {
               <TableRow key={entry.id || index}>
                 <TableCell>
                   {entry.moveType === 'shuffle' ? (
-                    <ShuffleDeck className="h-4 w-4 text-yellow-400" />
+                    <Shuffle className="h-4 w-4 text-yellow-400" />
                   ) : entry.moveType === 'pass' ? (
                     <FastForward className="h-4 w-4 text-blue-400" />
                   ) : (

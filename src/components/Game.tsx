@@ -471,7 +471,8 @@ const Game: React.FC = () => {
     const newWord = {
       word,
       player: currentPlayer.name,
-      score: scoreToAdd
+      score: scoreToAdd,
+      moveType: 'place_tiles' as const
     };
     
     setWordHistory(prev => [...prev, newWord]);
@@ -545,7 +546,7 @@ const Game: React.FC = () => {
         player: currentPlayer.name,
         word: '',
         score: 0,
-        moveType: 'shuffle'
+        moveType: 'shuffle' as const
       };
       
       setWordHistory(prev => [...prev, newMoveEntry]);
@@ -584,7 +585,7 @@ const Game: React.FC = () => {
         player: currentPlayer.name,
         word: '',
         score: 0,
-        moveType: 'pass'
+        moveType: 'pass' as const
       };
       
       setWordHistory(prev => [...prev, newMoveEntry]);
