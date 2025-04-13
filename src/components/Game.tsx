@@ -12,7 +12,8 @@ import {
   PlacedTile,
   shuffleArray,
   drawTiles,
-  calculateWordScore
+  calculateWordScore,
+  createTileBag
 } from '@/utils/gameLogic';
 import { useToast } from '@/components/ui/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -31,34 +32,69 @@ const Game: React.FC = () => {
   const location = useLocation();
   const [gameId, setGameId] = useState<string | null>(null);
 
-  // Extract gameId from the URL if it exists
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const id = params.get('id');
     if (id) {
       setGameId(id);
-      // TODO: Load existing game from PocketBase
+      fetchExistingGame(id);
     }
   }, [location]);
-  
+
+  const fetchExistingGame = async (id: string) => {
+    try {
+      const record = await pb.collection('games').getOne(id, {
+        expand: 'players'
+      });
+      
+      if (record) {
+        console.log("Fetched game:", record);
+        
+        const loadedGameState: GameState = {
+          board: record.board_state ? JSON.parse(record.board_state) : initializeGame(2).board,
+          players: record.players ? record.players.map((playerId, index) => ({
+            id: playerId,
+            name: record.playerNames[index] || `Player ${index + 1}`,
+            score: 0,
+            rack: [],
+            isAI: false,
+            isActive: playerId === record.current_player_index
+          })) : [],
+          currentPlayerIndex: record.players ? record.players.findIndex(id => id === record.current_player_index) : 0,
+          tileBag: record.tile_bag ? JSON.parse(record.tile_bag) : createTileBag(),
+          isGameOver: record.status !== 'in_progress',
+          winner: null,
+          placedTiles: []
+        };
+        
+        console.log("Converted game state:", loadedGameState);
+        setGameState(loadedGameState);
+      }
+    } catch (error) {
+      console.error("Error fetching game:", error);
+      toast({
+        title: "Villa við að sækja leik",
+        description: "Ekki tókst að sækja leikinn. Vinsamlegast reyndu aftur.",
+        variant: "destructive",
+      });
+    }
+  };
+
   useEffect(() => {
     if (gameState) {
       console.log("Game state updated:", gameState);
       
-      // If we have a gameId, update the board state in PocketBase
       if (gameId) {
         updateGameBoardState(gameId, gameState);
       }
     }
   }, [gameState, gameId]);
   
-  // Make sure we initialize with the correct player ID
   const handleStartGame = (playerCount: number, playerNames: string[], newGameId?: string) => {
     console.log("Starting game with", playerCount, "players");
-    // Make sure the first player ID matches the current user's ID
+    const tileBag = createTileBag();
     const newGameState = initializeGame(playerCount, playerNames);
     
-    // Set the current player ID if user is logged in
     if (user) {
       newGameState.players[0].id = user.id;
     }
@@ -66,10 +102,8 @@ const Game: React.FC = () => {
     console.log("Initial game state:", newGameState);
     setGameState(newGameState);
     
-    // Set the gameId if provided
     if (newGameId) {
       setGameId(newGameId);
-      // Update the board state in PocketBase
       updateGameBoardState(newGameId, newGameState);
     }
     
@@ -242,7 +276,6 @@ const Game: React.FC = () => {
     
     const word = wordLetters.join('');
     
-    // Add to word history
     const newWord = {
       word,
       player: currentPlayer.name,
@@ -251,7 +284,6 @@ const Game: React.FC = () => {
     
     setWordHistory(prev => [...prev, newWord]);
     
-    // Save the move to PocketBase if we have a gameId
     if (gameId && user) {
       saveGameMove({
         gameId: gameId,
@@ -292,7 +324,6 @@ const Game: React.FC = () => {
     setGameState(newGameState);
     setPlacedTilesMap(new Map());
     
-    // Update the board state in PocketBase
     if (gameId) {
       updateGameBoardState(gameId, newGameState);
     }

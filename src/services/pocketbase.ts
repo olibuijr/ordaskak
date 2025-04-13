@@ -98,8 +98,11 @@ export const createNewGame = async (data) => {
     // Make sure the current user is included in the players array
     const playerIds = [currentUser.id, ...selectedUserIds];
     
+    // Initialize game board and tile bag
+    const initialBoard = initializeGameBoard();
+    const initialTileBag = JSON.stringify(data.tileBag || []);
+    
     // Format data to match the required fields for PocketBase
-    // The current_player_index is now a relation to the user ID who starts the game
     const gameData = {
       name: data.name || `Game ${new Date().toLocaleString('is-IS')}`,
       created_by: currentUser.id,
@@ -111,7 +114,8 @@ export const createNewGame = async (data) => {
       players: playerIds, // Include both the current user and selected players
       isActive: true,
       userId: currentUser.id,
-      board_state: JSON.stringify(initializeGameBoard())
+      board_state: JSON.stringify(initialBoard),
+      tile_bag: initialTileBag
     };
     
     console.log("Sending formatted game data:", gameData);
@@ -182,7 +186,8 @@ export const updateGameBoardState = async (gameId, gameState) => {
     
     const data = {
       board_state: JSON.stringify(gameState.board),
-      current_player_index: gameState.players[gameState.currentPlayerIndex].id
+      current_player_index: gameState.players[gameState.currentPlayerIndex].id,
+      tile_bag: JSON.stringify(gameState.tileBag) // Add tile_bag to the update
     };
     
     const record = await pb.collection('games').update(gameId, data);
@@ -193,3 +198,4 @@ export const updateGameBoardState = async (gameId, gameState) => {
     throw error;
   }
 };
+
