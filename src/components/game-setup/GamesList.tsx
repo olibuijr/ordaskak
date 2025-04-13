@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Play, Check } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getUsersByIds } from "@/services/users";
+import { toast } from "@/components/ui/use-toast";
 
 interface GameData {
   id: string;
@@ -62,13 +63,16 @@ const GamesList = ({
         }
       });
       
-      if (playerIds.size === 0) return;
+      if (playerIds.size === 0) {
+        console.log("No player IDs to fetch");
+        return;
+      }
+      
+      const playerIdsArray = Array.from(playerIds);
+      console.log("Need to fetch these player IDs:", playerIdsArray);
       
       setIsLoading(true);
       try {
-        const playerIdsArray = Array.from(playerIds);
-        console.log("Fetching player names for IDs:", playerIdsArray);
-        
         const users = await getUsersByIds(playerIdsArray);
         console.log("Received user data:", users);
         
@@ -84,9 +88,19 @@ const GamesList = ({
           setPlayerNameCache(prev => ({ ...prev, ...newPlayerNames }));
         } else {
           console.error("No user data returned from getUsersByIds");
+          toast({
+            title: "Villa",
+            description: "Ekki tókst að sækja notendanöfn.",
+            variant: "destructive"
+          });
         }
       } catch (error) {
         console.error("Error fetching player names:", error);
+        toast({
+          title: "Villa",
+          description: "Villa kom upp við að sækja notendanöfn.",
+          variant: "destructive"
+        });
       } finally {
         setIsLoading(false);
       }
@@ -115,9 +129,25 @@ const GamesList = ({
         return playerNameCache[playerId];
       }
       
-      return `Loading player...`;
+      return isLoading ? "Hleður..." : "Unknown Player";
     }).join(', ');
   };
+  
+  useEffect(() => {
+    console.log("Player name cache updated:", playerNameCache);
+    console.log("Active games:", activeGames);
+    
+    if (activeGames.length > 0) {
+      const firstGame = activeGames[0];
+      console.log("First game players:", firstGame.players);
+      
+      if (firstGame.players && firstGame.players.length > 0) {
+        firstGame.players.forEach(playerId => {
+          console.log(`Player ID: ${playerId}, Cached name: ${playerNameCache[playerId] || 'Not cached'}`);
+        });
+      }
+    }
+  }, [playerNameCache, activeGames]);
   
   return (
     <>
@@ -147,7 +177,7 @@ const GamesList = ({
                         size="sm"
                         onClick={() => {
                           const playerNames = game.players.map(playerId => {
-                            if (typeof playerId !== 'string' || playerId.length > 36 || !playerId.includes('-')) {
+                            if (!isValidPlayerId(playerId)) {
                               return playerId;
                             }
                             return playerNameCache[playerId] || 'Unknown Player';

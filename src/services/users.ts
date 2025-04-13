@@ -67,8 +67,11 @@ export const getUsersByIds = async (userIds: string[]) => {
       return [];
     }
     
-    // Create a filter to get all users with IDs in the provided array
-    const filter = validUserIds.map(id => `id = "${id}"`).join(' || ');
+    console.log("Valid user IDs:", validUserIds);
+    
+    // Use the expanded filter syntax for multiple IDs
+    // This is more reliable than the OR operator
+    const filter = `id ?= "${validUserIds.join('","')}"`;
     
     console.log("Fetching users with filter:", filter);
     
@@ -99,6 +102,7 @@ export const getUsersByIds = async (userIds: string[]) => {
     return users;
   } catch (error) {
     console.error('Error batch fetching users:', error);
+    console.error('Error details:', error);
     return [];
   }
 };
