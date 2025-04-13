@@ -89,11 +89,11 @@ export const createNewGame = async (data) => {
     }
     
     // Format data to match the required fields for PocketBase
-    // Making sure current_player_index is explicitly set as a number
+    // The current_player_index is now a relation to the user ID who starts the game
     const gameData = {
       name: data.name || `Game ${new Date().toLocaleString('is-IS')}`,
       created_by: currentUser.id,
-      current_player_index: 0, // Explicitly set this to 0 (first player's turn)
+      current_player_index: currentUser.id, // Set to the ID of the user who creates the game
       status: "in_progress",
       // Store player names in a separate field for our UI
       playerNames: data.playerNames,
@@ -106,30 +106,16 @@ export const createNewGame = async (data) => {
     console.log("Sending formatted game data:", gameData);
     
     try {
-      // First attempt with the players array and explicitly setting the current_player_index
-      const recordData = {
-        ...gameData,
-        current_player_index: Number(0) // Ensure it's explicitly a number
-      };
-      
-      const record = await pb.collection('games').create(recordData);
+      // Create the game with the current user as the current player
+      const record = await pb.collection('games').create(gameData);
       console.log("Game created successfully:", record);
       return record;
     } catch (firstError) {
       console.error('First attempt error:', firstError);
       
-      // If that fails, try again with a different approach
-      console.log("Retrying with different format");
-      // Sometimes PocketBase needs the field as a string when sending it
-      const recordData = {
-        ...gameData,
-        current_player_index: "0", // Try as string instead
-        players: [currentUser.id]
-      };
-      
-      const record = await pb.collection('games').create(recordData);
-      console.log("Game created successfully on second attempt:", record);
-      return record;
+      // If that fails, let's try to handle any potential issues
+      console.log("Error details:", firstError.response?.data);
+      throw firstError; // Re-throw the error for proper handling upstream
     }
   } catch (error) {
     console.error('Error creating game:', error);
