@@ -71,6 +71,7 @@
   max-width: 100%;
   max-height: 100%;
   margin: 0 auto;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
 /* Tile and rack styles */
@@ -80,10 +81,10 @@
 
 .letter-tile {
   @apply flex items-center justify-center text-xl font-bold relative;
-  background: linear-gradient(135deg, #e2c088 0%, #dab285 100%);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  background: linear-gradient(135deg, #E6D2AC 0%, #D4BC8B 100%);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
   border-radius: 4px;
-  border: 1px solid #c19c65;
+  border: 1px solid #C19C65;
   position: relative;
   overflow: hidden;
   transition: transform 0.2s ease-in-out;
@@ -108,19 +109,19 @@
 }
 
 .bonus-dw {
-  @apply bg-pink-700/30;
+  @apply bg-[#9D5884];
 }
 
 .bonus-tw {
-  @apply bg-red-700/30;
+  @apply bg-[#8B3E3E];
 }
 
 .bonus-dl {
-  @apply bg-blue-500/30;
+  @apply bg-[#4A7FBA];
 }
 
 .bonus-tl {
-  @apply bg-teal-500/30;
+  @apply bg-[#396592];
 }
 
 .player-rack {
@@ -130,7 +131,7 @@
   backdrop-filter: blur(10px);
   /* Make it look like a wooden rack */
   position: relative;
-  border: 2px solid #c19c65;
+  border: 2px solid #C19C65;
 }
 
 .player-rack::before {
@@ -159,13 +160,13 @@
 
 @keyframes pulse {
   0% {
-    box-shadow: 0 0 5px rgba(100, 255, 218, 0.3);
+    box-shadow: 0 0 5px rgba(155, 135, 245, 0.3);
   }
   50% {
-    box-shadow: 0 0 20px rgba(100, 255, 218, 0.7);
+    box-shadow: 0 0 20px rgba(155, 135, 245, 0.7);
   }
   100% {
-    box-shadow: 0 0 5px rgba(100, 255, 218, 0.3);
+    box-shadow: 0 0 5px rgba(155, 135, 245, 0.3);
   }
 }
 
@@ -182,4 +183,20 @@
 
 .letter-tile:active {
   cursor: grabbing !important;
+}
+
+/* Board cell specific styles */
+.board-cell {
+  transition: all 0.2s ease;
+}
+
+.board-cell:hover {
+  transform: scale(1.05);
+  z-index: 20;
+}
+
+/* Custom styling for the board grid */
+.board-grid {
+  border: 3px solid #1A1F2C;
+  border-radius: 8px;
 }

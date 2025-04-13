@@ -17,13 +17,13 @@ const TileComponent: React.FC<{
 }> = ({ tile, isSelected, onClick }) => (
   <div 
     className={`rack-tile letter-tile w-14 h-14 md:w-16 md:h-16 m-1 cursor-pointer ${
-      isSelected ? 'ring-2 ring-game-accent-pink transform -translate-y-4' : ''
+      isSelected ? 'ring-2 ring-[#9b87f5] transform -translate-y-4' : ''
     }`}
     onClick={onClick}
     draggable="true"
     data-tile-id={tile.id}
   >
-    <span className="text-2xl font-bold">{tile.letter || '?'}</span>
+    <span className="text-2xl font-bold text-[#1A1F2C]">{tile.letter || '?'}</span>
     {tile.letter && <span className="letter-tile-value">{tile.value}</span>}
   </div>
 );
