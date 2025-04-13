@@ -1,6 +1,6 @@
 import { pb } from './pocketbase';
 import { getCurrentUser } from './authentication';
-import { GameState } from '@/utils/gameLogic';
+import { GameState, PlacedTile } from '@/utils/gameLogic';
 
 // Create a map of active request signal controllers
 const activeRequests = new Map();
@@ -201,9 +201,9 @@ export const fetchGameMoves = async (gameId) => {
     
     console.log("Fetching moves for game:", gameId);
     
-    const records = await pb.collection('gamemoves').getList(1, 100, {
+    const records = await pb.collection('gamemoves').getList(1, 200, {  // Increased from 100 to 200
       filter: `game = "${gameId}"`,
-      sort: 'created',
+      sort: 'created',  // Sort by creation time to ensure proper order
       expand: 'player',
       signal: controller.signal
     });
@@ -211,15 +211,20 @@ export const fetchGameMoves = async (gameId) => {
     // Clean up the controller after request is complete
     activeRequests.delete(requestKey);
     
-    console.log("Fetched game moves:", records.items);
+    console.log(`Fetched ${records.items.length} game moves for game ${gameId}:`, records.items);
     
     return records.items.map(move => {
       let parsedTiles = [];
       
       try {
         if (move.tiles_placed && typeof move.tiles_placed === 'string') {
-          parsedTiles = JSON.parse(move.tiles_placed);
-          console.log(`Parsed tiles for move ${move.id}:`, parsedTiles);
+          const parsed = JSON.parse(move.tiles_placed);
+          if (Array.isArray(parsed)) {
+            parsedTiles = parsed;
+            console.log(`Successfully parsed ${parsed.length} tiles for move ${move.id}:`, parsedTiles);
+          } else {
+            console.error(`Tiles data for move ${move.id} is not an array:`, parsed);
+          }
         }
       } catch (error) {
         console.error(`Error parsing tiles for move ${move.id}:`, error);

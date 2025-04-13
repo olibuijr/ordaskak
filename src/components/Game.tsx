@@ -495,6 +495,18 @@ const Game: React.FC = () => {
     
     setWordHistory(prev => [...prev, newWord]);
     
+    const placedTilesCopy = newGameState.placedTiles.map(tile => ({
+      id: tile.id,
+      letter: tile.letter,
+      value: tile.value,
+      isBlank: tile.isBlank,
+      x: tile.x,
+      y: tile.y,
+      isNew: tile.isNew
+    }));
+    
+    console.log("Saving placed tiles:", placedTilesCopy);
+    
     if (gameId && user) {
       const userId = user.id || currentPlayer.id;
       if (userId && !userId.startsWith('player-')) {
@@ -504,7 +516,7 @@ const Game: React.FC = () => {
           word: word,
           score: scoreToAdd,
           moveType: 'place_tiles',
-          placedTiles: newGameState.placedTiles
+          placedTiles: placedTilesCopy
         });
       }
     }
