@@ -61,20 +61,18 @@ export const createNewGame = async (data) => {
   try {
     console.log("Creating new game with data:", data);
     
-    // Based on the API errors, we need to modify our approach:
-    // 1. For current_player_index: ensure it's properly set and matches expected format
-    // 2. For players: don't try to create dummy relation records
-    
     // Format data to match the required fields for PocketBase
     const gameData = {
       name: data.name || `Game ${new Date().toLocaleString('is-IS')}`,
       created_by: data.userId,
-      current_player_index: 0, // Use a number instead of string "0"
+      // For the current_player_index, API seems to expect it as a numeric field
+      current_player_index: 0,
       status: "in_progress",
       // Store player names for our UI
       playerNames: data.players,
-      // Don't include the players field at all for now since it's causing relation errors
-      // players: playerIds,  (removed this field)
+      // The API requires a 'players' field, and it appears to be a required field
+      // Create a simple array for now
+      players: ["player1"],
       isActive: true,
       userId: data.userId
     };
