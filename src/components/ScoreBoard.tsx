@@ -5,6 +5,7 @@ import {
   CardContent
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ScoreBoardProps {
   players: Player[];
@@ -12,6 +13,8 @@ interface ScoreBoardProps {
 }
 
 const ScoreBoard: React.FC<ScoreBoardProps> = ({ players, tilesRemaining }) => {
+  const { user } = useAuth();
+  
   return (
     <Card className="bg-game-light/40 backdrop-blur-md border-game-accent-blue/30">
       <CardContent className="pt-6">
@@ -31,6 +34,9 @@ const ScoreBoard: React.FC<ScoreBoardProps> = ({ players, tilesRemaining }) => {
                 }`} />
                 <span className="font-semibold">{player.name}</span>
                 {player.isAI && <Badge variant="outline" className="text-xs">AI</Badge>}
+                {user && user.username === player.name && (
+                  <Badge className="text-xs bg-game-accent-pink">Þú</Badge>
+                )}
               </div>
               <div className="text-xl font-bold text-game-accent-blue">
                 {player.score}
