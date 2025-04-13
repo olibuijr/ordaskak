@@ -37,6 +37,15 @@ const GamesList = ({
   currentUserName,
   formatDate 
 }: GamesListProps) => {
+  
+  // Helper function to format player names
+  const formatPlayersList = (players: string[]) => {
+    if (!players || players.length === 0) {
+      return "No players";
+    }
+    return players.join(', ');
+  };
+  
   return (
     <>
       {activeGames.length > 0 && (
@@ -58,7 +67,7 @@ const GamesList = ({
                 {activeGames.map((game) => (
                   <TableRow key={game.id} className="hover:bg-game-dark/50">
                     <TableCell>{formatDate(game.created)}</TableCell>
-                    <TableCell>{game.players.join(', ')}</TableCell>
+                    <TableCell>{formatPlayersList(game.players)}</TableCell>
                     <TableCell className="text-right">
                       <Button 
                         variant="outline" 
@@ -102,7 +111,7 @@ const GamesList = ({
                 {completedGames.map((game) => (
                   <TableRow key={game.id} className="hover:bg-game-dark/50">
                     <TableCell>{formatDate(game.created)}</TableCell>
-                    <TableCell>{game.players.join(', ')}</TableCell>
+                    <TableCell>{formatPlayersList(game.players)}</TableCell>
                     <TableCell>
                       {game.winner === currentUserName ? (
                         <span className="text-game-accent-green font-medium">Þú vannst!</span>

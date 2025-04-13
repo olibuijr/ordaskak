@@ -1,4 +1,3 @@
-
 import { pb } from './pocketbase';
 import { getCurrentUser } from './authentication';
 
@@ -10,18 +9,32 @@ export const fetchUserGames = async (userId) => {
     const records = await pb.collection('games').getList(1, 50, {
       sort: '-created',
       filter: `created_by = "${userId}" || players ~ "${userId}"`,
+      expand: 'players'
     });
     
-    const games = records.items.map(item => ({
-      id: item.id,
-      created: item.created,
-      players: item.playerNames || [],
-      isActive: item.status === 'in_progress', 
-      yourScore: item.yourScore,
-      winner: item.winner,
-      userId: item.created_by,
-      name: item.name
-    }));
+    const games = records.items.map(item => {
+      // Correctly handle player names from the database
+      let playerNames = [];
+      
+      // Check if playerNames is available from the database
+      if (item.playerNames && Array.isArray(item.playerNames)) {
+        playerNames = item.playerNames;
+      } else if (item.players && Array.isArray(item.players)) {
+        // Fallback to player IDs if names aren't available
+        playerNames = item.players;
+      }
+      
+      return {
+        id: item.id,
+        created: item.created,
+        players: playerNames,
+        isActive: item.status === 'in_progress', 
+        yourScore: item.yourScore,
+        winner: item.winner,
+        userId: item.created_by,
+        name: item.name
+      };
+    });
     
     return {
       activeGames: games.filter(game => game.isActive),
@@ -143,7 +156,9 @@ export const fetchGameById = async (gameId) => {
       return null;
     }
     
-    const record = await pb.collection('games').getOne(gameId);
+    const record = await pb.collection('games').getOne(gameId, {
+      expand: 'players'
+    });
     
     if (!record) {
       console.error("Game record not found:", gameId);
