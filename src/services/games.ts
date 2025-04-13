@@ -131,11 +131,16 @@ export const saveGameMove = async (moveData) => {
       score_gained: moveData.score || 0 // Add required field
     };
     
-    const record = await pb.collection('gamemoves').create(data);
-    console.log("Game move saved successfully:", record);
-    return record;
+    try {
+      const record = await pb.collection('gamemoves').create(data);
+      console.log("Game move saved successfully:", record);
+      return record;
+    } catch (error) {
+      console.error('Error saving game move:', error);
+      throw error;
+    }
   } catch (error) {
-    console.error('Error saving game move:', error);
+    console.error('Error in saveGameMove:', error);
     return null; // Return null instead of throwing to prevent app crashes
   }
 };
@@ -146,31 +151,65 @@ export const updateGameBoardState = async (gameId, gameState) => {
     console.log("Updating game board state for game:", gameId);
     
     // Safety check to make sure gameState and its properties exist
-    if (!gameState || !gameState.players || !Array.isArray(gameState.players)) {
+    if (!gameState || !gameState.players) {
       console.error("Invalid game state:", gameState);
       return null;
     }
     
-    // Get the current player's ID (not the index) with safety checks
-    const currentPlayerIndex = typeof gameState.currentPlayerIndex === 'number' && 
-                              gameState.currentPlayerIndex >= 0 && 
-                              gameState.currentPlayerIndex < gameState.players.length ? 
-                              gameState.currentPlayerIndex : 0;
+    // Log the players array for debugging
+    console.log("Players array:", gameState.players);
     
-    const currentPlayer = gameState.players[currentPlayerIndex];
+    // Get current player index
+    const currentPlayerIndex = gameState.currentPlayerIndex;
     
-    if (!currentPlayer) {
+    // Make sure currentPlayerIndex is a valid index
+    if (typeof currentPlayerIndex !== 'number' || currentPlayerIndex < 0 || currentPlayerIndex >= gameState.players.length) {
       console.error("Current player not found:", currentPlayerIndex, gameState.players);
       return null;
     }
-
-    // Make sure the current player has an ID
-    const currentPlayerId = currentPlayer.id || `player-${currentPlayerIndex}`;
+    
+    // Get the current player
+    const currentPlayer = gameState.players[currentPlayerIndex];
+    
+    if (!currentPlayer) {
+      console.error("Current player is null or undefined");
+      return null;
+    }
+    
+    // Get the current player's ID
+    // If it's a real user ID (from database), use that. Otherwise, use the database ID if available
+    const currentPlayerId = currentPlayer.id;
     console.log("Current player ID to be set:", currentPlayerId);
+    
+    // Only allow updates if currentPlayerId is a valid string
+    if (!currentPlayerId || typeof currentPlayerId !== 'string') {
+      console.error("Invalid current player ID:", currentPlayerId);
+      return null;
+    }
+    
+    // Check if the ID is in the format "player-X" which would be a local ID, not a database ID
+    const isLocalId = currentPlayerId.startsWith('player-');
+    
+    // If it's a local ID and we have real database IDs in the players array, try to use them
+    let finalPlayerId = currentPlayerId;
+    if (isLocalId && gameState.players.length > 0) {
+      // Try to fetch the game to get the real player IDs
+      try {
+        const gameRecord = await pb.collection('games').getOne(gameId);
+        if (gameRecord && gameRecord.players && gameRecord.players.length > currentPlayerIndex) {
+          // Use the real player ID from the database record
+          finalPlayerId = gameRecord.players[currentPlayerIndex];
+          console.log("Using real player ID from database:", finalPlayerId);
+        }
+      } catch (error) {
+        console.warn("Could not fetch game record to get real player IDs:", error);
+        // Continue with the local ID as fallback
+      }
+    }
     
     const data = {
       board_state: JSON.stringify(gameState.board),
-      current_player_index: currentPlayerId, // Set the ID not the index
+      current_player_index: finalPlayerId,  // Use the finalized player ID
       tile_bag: JSON.stringify(gameState.tileBag)
     };
     
@@ -180,11 +219,29 @@ export const updateGameBoardState = async (gameId, gameState) => {
       return record;
     } catch (error) {
       console.error('Error updating game board state:', error);
-      // Don't throw, just return null to prevent app crashes
       return null;
     }
   } catch (error) {
     console.error('Error in updateGameBoardState:', error);
+    return null;
+  }
+};
+
+// Fetch a game by ID
+export const fetchGameById = async (gameId) => {
+  try {
+    if (!gameId) {
+      console.error("No game ID provided to fetchGameById");
+      return null;
+    }
+    
+    const record = await pb.collection('games').getOne(gameId, {
+      expand: 'players'
+    });
+    
+    return record;
+  } catch (error) {
+    console.error("Error fetching game by ID:", error);
     return null;
   }
 };

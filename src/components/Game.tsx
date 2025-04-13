@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import GameBoard from './GameBoard';
 import PlayerRack from './PlayerRack';
@@ -20,7 +19,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/contexts/AuthContext';
 import { pb } from '@/services/pocketbase';
-import { saveGameMove, updateGameBoardState } from '@/services/games';
+import { saveGameMove, updateGameBoardState, fetchGameById } from '@/services/games';
 import { useLocation } from 'react-router-dom';
 
 const Game: React.FC = () => {
@@ -45,26 +44,26 @@ const Game: React.FC = () => {
 
   const fetchExistingGame = async (id: string) => {
     try {
-      const record = await pb.collection('games').getOne(id, {
-        expand: 'players'
-      });
+      const record = await fetchGameById(id);
       
       if (record) {
         console.log("Fetched game:", record);
         
-        // Convert player string IDs to player objects with safety checks
-        const playersArray = record.players ? 
-          record.players.map((playerId, index) => ({
-            id: playerId,
-            name: record.playerNames && record.playerNames[index] ? record.playerNames[index] : `Player ${index + 1}`,
-            score: 0,
-            rack: [],
-            isAI: false,
-            // Mark the current player as active
-            isActive: playerId === record.current_player_index
-          })) : [];
+        // Get player IDs from the database
+        const playerIds = record.players || [];
+        const playerNames = record.playerNames || [];
         
-        // Find the index of the current player in the players array with safety check
+        // Create player objects with the correct database IDs
+        const playersArray = playerIds.map((playerId, index) => ({
+          id: playerId, // Use the real database ID
+          name: playerNames[index] || `Player ${index + 1}`,
+          score: 0,
+          rack: [],
+          isAI: false,
+          isActive: playerId === record.current_player_index
+        }));
+        
+        // Find the current player index in our players array
         const currentPlayerIndex = playersArray.findIndex(player => player.id === record.current_player_index);
         
         console.log("Current player index:", currentPlayerIndex);
@@ -81,7 +80,57 @@ const Game: React.FC = () => {
         };
         
         console.log("Converted game state:", loadedGameState);
-        setGameState(loadedGameState);
+        
+        // Check if we need to deal tiles to players
+        const updatedGameState = { ...loadedGameState };
+        let needUpdate = false;
+        
+        // Deal tiles to players if their racks are empty
+        for (let i = 0; i < updatedGameState.players.length; i++) {
+          if (updatedGameState.players[i].rack.length === 0) {
+            const { drawn, remaining } = drawTiles(updatedGameState.tileBag, 7);
+            updatedGameState.players[i].rack = drawn;
+            updatedGameState.tileBag = remaining;
+            needUpdate = true;
+          }
+        }
+        
+        if (needUpdate) {
+          setGameState(updatedGameState);
+        } else {
+          setGameState(loadedGameState);
+        }
+        
+        // Fetch game moves to build word history
+        try {
+          const movesRecords = await pb.collection('gamemoves').getList(1, 50, {
+            filter: `game = "${id}"`,
+            sort: 'created'
+          });
+          
+          if (movesRecords && movesRecords.items.length > 0) {
+            const history = movesRecords.items.map(move => ({
+              word: move.word || '',
+              player: playersArray.find(p => p.id === move.user)?.name || 'Unknown',
+              score: move.score_gained || 0
+            }));
+            
+            setWordHistory(history);
+            
+            // Update player scores from moves
+            if (needUpdate) {
+              movesRecords.items.forEach(move => {
+                const playerIndex = updatedGameState.players.findIndex(p => p.id === move.user);
+                if (playerIndex !== -1) {
+                  updatedGameState.players[playerIndex].score += (move.score_gained || 0);
+                }
+              });
+              setGameState(updatedGameState);
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching game moves:", error);
+        }
       }
     } catch (error) {
       console.error("Error fetching game:", error);
@@ -94,12 +143,9 @@ const Game: React.FC = () => {
   };
 
   useEffect(() => {
-    if (gameState) {
+    if (gameState && gameId) {
       console.log("Game state updated:", gameState);
-      
-      if (gameId) {
-        updateGameBoardState(gameId, gameState);
-      }
+      updateGameBoardState(gameId, gameState);
     }
   }, [gameState, gameId]);
   
@@ -342,10 +388,6 @@ const Game: React.FC = () => {
     
     setGameState(newGameState);
     setPlacedTilesMap(new Map());
-    
-    if (gameId) {
-      updateGameBoardState(gameId, newGameState);
-    }
   };
   
   const handleShuffleTiles = function() {
