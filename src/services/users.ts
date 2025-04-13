@@ -75,14 +75,16 @@ export const getUsersByIds = async (userIds: string[]) => {
     
     console.log("Valid user IDs:", validUserIds);
     
-    // PocketBase's filter syntax for ID lists
+    // PocketBase's filter syntax for ID lists needs double quotes
+    // First build a comma-separated list of user IDs with double quotes
+    let filterStr = validUserIds.map(id => `"${id}"`).join(',');
     const filter = validUserIds.length === 1 
       ? `id = "${validUserIds[0]}"` 
-      : `id ~ "${validUserIds.join('","')}"`;
+      : `id IN [${filterStr}]`;
     
     console.log("Fetching users with filter:", filter);
     
-    const records = await pb.collection('users').getList(1, 100, {
+    const records = await pb.collection('users').getList(1, validUserIds.length, {
       filter: filter,
       fields: 'id,username,email,name,avatar'
     });
@@ -104,6 +106,17 @@ export const getUsersByIds = async (userIds: string[]) => {
     
     if (missingIds.length > 0) {
       console.warn("Some user IDs were not found:", missingIds);
+      
+      // For missing IDs, provide fallback data
+      const fallbackUsers = missingIds.map(id => ({
+        id: id,
+        username: `User-${id.substring(0, 5)}`,
+        email: '',
+        name: `User-${id.substring(0, 5)}`,
+        avatar: null
+      }));
+      
+      users.push(...fallbackUsers);
     }
     
     console.log("Returning user data:", users);
@@ -111,6 +124,14 @@ export const getUsersByIds = async (userIds: string[]) => {
   } catch (error) {
     console.error('Error batch fetching users:', error);
     console.error('Error details:', error);
-    return [];
+    
+    // Return basic data for all IDs to prevent UI issues
+    return userIds.map(id => ({
+      id: id || '',
+      username: `User-${id.substring(0, 5)}`,
+      email: '',
+      name: `User-${id.substring(0, 5)}`,
+      avatar: null
+    }));
   }
 };

@@ -1,4 +1,3 @@
-
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Table,
@@ -78,7 +77,7 @@ const GamesList = ({
           const newPlayerNames: Record<string, string> = {};
           users.forEach(user => {
             if (user && user.id) {
-              newPlayerNames[user.id] = user.name || user.username || 'Unknown Player';
+              newPlayerNames[user.id] = user.name || user.username || `User-${user.id.substring(0, 5)}`;
               console.log(`Mapped ${user.id} to ${newPlayerNames[user.id]}`);
             }
           });
@@ -86,6 +85,12 @@ const GamesList = ({
           setPlayerNameCache(prev => ({ ...prev, ...newPlayerNames }));
         } else {
           console.error("No user data returned from getUsersByIds");
+          const fallbackNames: Record<string, string> = {};
+          playerIdsArray.forEach(id => {
+            fallbackNames[id] = `User-${id.substring(0, 5)}`;
+          });
+          setPlayerNameCache(prev => ({ ...prev, ...fallbackNames }));
+          
           toast({
             title: "Villa",
             description: "Ekki tókst að sækja notendanöfn.",
@@ -94,6 +99,12 @@ const GamesList = ({
         }
       } catch (error) {
         console.error("Error fetching player names:", error);
+        const fallbackNames: Record<string, string> = {};
+        playerIdsArray.forEach(id => {
+          fallbackNames[id] = `User-${id.substring(0, 5)}`;
+        });
+        setPlayerNameCache(prev => ({ ...prev, ...fallbackNames }));
+        
         toast({
           title: "Villa",
           description: "Villa kom upp við að sækja notendanöfn.",
@@ -127,7 +138,7 @@ const GamesList = ({
         return playerNameCache[playerId];
       }
       
-      return isLoading ? "Hleður..." : "Unknown Player";
+      return isLoading ? "Hleður..." : `User-${playerId.substring(0, 5)}`;
     }).join(', ');
   };
   
@@ -178,7 +189,7 @@ const GamesList = ({
                             if (!isValidPlayerId(playerId)) {
                               return playerId;
                             }
-                            return playerNameCache[playerId] || 'Unknown Player';
+                            return playerNameCache[playerId] || `User-${playerId.substring(0, 5)}`;
                           });
                           
                           onStartGame(
