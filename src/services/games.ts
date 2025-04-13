@@ -190,16 +190,26 @@ export const updatePlayerRacks = async (gameId, players, tileBag) => {
       return null;
     }
     
+    console.log("Updating player racks for game:", gameId);
+    console.log("Players data:", players);
+    
     // Store the rack data for each player
     const playerRacks = {};
     players.forEach((player, index) => {
-      playerRacks[`player_${player.id}_rack`] = JSON.stringify(player.rack);
+      if (player && player.id && player.rack) {
+        console.log(`Saving rack for player ${player.id}:`, player.rack);
+        playerRacks[`player_${player.id}_rack`] = JSON.stringify(player.rack);
+      } else {
+        console.error(`Invalid player data at index ${index}:`, player);
+      }
     });
     
     const data = {
       ...playerRacks,
       tile_bag: JSON.stringify(tileBag)
     };
+    
+    console.log("Data being sent to update racks:", data);
     
     const record = await pb.collection('games').update(gameId, data);
     console.log("Player racks and tile bag updated successfully:", record);
@@ -286,7 +296,9 @@ export const updateGameBoardState = async (gameId, gameState) => {
     // Update both the board state and persist player racks
     const playerRacks = {};
     gameState.players.forEach(player => {
-      playerRacks[`player_${player.id}_rack`] = JSON.stringify(player.rack);
+      if (player && player.id && player.rack) {
+        playerRacks[`player_${player.id}_rack`] = JSON.stringify(player.rack);
+      }
     });
     
     const data = {
@@ -295,6 +307,8 @@ export const updateGameBoardState = async (gameId, gameState) => {
       tile_bag: JSON.stringify(gameState.tileBag),
       ...playerRacks
     };
+    
+    console.log("Data being sent to update game state:", data);
     
     try {
       const record = await pb.collection('games').update(gameId, data);

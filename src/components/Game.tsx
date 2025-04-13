@@ -231,6 +231,11 @@ const Game: React.FC = () => {
     if (gameState && gameId && !isInitialLoad) {
       console.log("Game state updated:", gameState);
       updateGameBoardState(gameId, gameState);
+      
+      if (gameState.players && gameState.tileBag) {
+        console.log("Updating player racks after game state change");
+        updatePlayerRacks(gameId, gameState.players, gameState.tileBag);
+      }
     }
   }, [gameState, gameId, isInitialLoad]);
   
@@ -328,7 +333,7 @@ const Game: React.FC = () => {
   };
   
   const handlePlayWord = function() {
-    if (!gameState) return;
+    if (!gameState || !gameId) return;
     
     const newGameState = { ...gameState };
     const currentPlayer = newGameState.players[newGameState.currentPlayerIndex];
@@ -470,10 +475,12 @@ const Game: React.FC = () => {
     
     setGameState(newGameState);
     setPlacedTilesMap(new Map());
+    
+    updatePlayerRacks(gameId, newGameState.players, newGameState.tileBag);
   };
   
   const handleShuffleTiles = function() {
-    if (!gameState) return;
+    if (!gameState || !gameId) return;
     
     const newGameState = { ...gameState };
     const currentPlayer = newGameState.players[newGameState.currentPlayerIndex];
@@ -482,6 +489,8 @@ const Game: React.FC = () => {
     
     setGameState(newGameState);
     
+    updatePlayerRacks(gameId, newGameState.players, newGameState.tileBag);
+    
     toast({
       title: "Stöfum blandað",
       description: "Stöfunum í rekkanum þínum hefur verið endurraðað",
@@ -489,7 +498,7 @@ const Game: React.FC = () => {
   };
   
   const handlePassTurn = function() {
-    if (!gameState) return;
+    if (!gameState || !gameId) return;
     
     const newGameState = { ...gameState };
     const currentPlayer = newGameState.players[newGameState.currentPlayerIndex];
@@ -511,7 +520,7 @@ const Game: React.FC = () => {
   };
   
   const handleRecallTiles = function() {
-    if (!gameState) return;
+    if (!gameState || !gameId) return;
     
     const newGameState = { ...gameState };
     const currentPlayer = newGameState.players[newGameState.currentPlayerIndex];
@@ -528,6 +537,8 @@ const Game: React.FC = () => {
     }
     
     newGameState.placedTiles = [];
+    
+    updatePlayerRacks(gameId, newGameState.players, newGameState.tileBag);
     
     toast({
       title: "Stöfum skilað",
