@@ -1,3 +1,4 @@
+
 import PocketBase from 'pocketbase';
 import { GameState } from '@/utils/gameLogic';
 
@@ -160,13 +161,21 @@ export const saveGameMove = async (moveData) => {
   try {
     console.log("Saving game move:", moveData);
     
+    if (!moveData || !moveData.gameId || !moveData.userId) {
+      console.error('Invalid move data:', moveData);
+      return null;
+    }
+    
     const data = {
       game: moveData.gameId,
       user: moveData.userId,
-      word: moveData.word,
-      score: moveData.score,
-      board_state: moveData.board_state,
-      player_index: moveData.player_index
+      word: moveData.word || '',
+      score: moveData.score || 0,
+      board_state: moveData.board_state || '{}',
+      player_index: moveData.player_index || 0,
+      move_type: 'word', // Add required field
+      player: moveData.userId, // Add required field
+      score_gained: moveData.score || 0 // Add required field
     };
     
     const record = await pb.collection('gamemoves').create(data);
@@ -174,7 +183,7 @@ export const saveGameMove = async (moveData) => {
     return record;
   } catch (error) {
     console.error('Error saving game move:', error);
-    throw error;
+    return null; // Return null instead of throwing to prevent app crashes
   }
 };
 
@@ -184,24 +193,26 @@ export const updateGameBoardState = async (gameId, gameState) => {
     console.log("Updating game board state for game:", gameId);
     
     // Safety check to make sure gameState and its properties exist
-    if (!gameState || !gameState.players || !Array.isArray(gameState.players) || gameState.players.length === 0) {
+    if (!gameState || !gameState.players || !Array.isArray(gameState.players)) {
       console.error("Invalid game state:", gameState);
-      throw new Error("Invalid game state structure");
+      return null;
     }
     
     // Get the current player's ID (not the index) with safety checks
-    const currentPlayerIndex = gameState.currentPlayerIndex >= 0 && 
+    const currentPlayerIndex = typeof gameState.currentPlayerIndex === 'number' && 
+                              gameState.currentPlayerIndex >= 0 && 
                               gameState.currentPlayerIndex < gameState.players.length ? 
                               gameState.currentPlayerIndex : 0;
     
     const currentPlayer = gameState.players[currentPlayerIndex];
     
-    if (!currentPlayer || !currentPlayer.id) {
-      console.error("Current player not found or has no ID:", currentPlayerIndex, gameState.players);
-      throw new Error("Current player not found or has no ID");
+    if (!currentPlayer) {
+      console.error("Current player not found:", currentPlayerIndex, gameState.players);
+      return null;
     }
-    
-    const currentPlayerId = currentPlayer.id;
+
+    // Make sure the current player has an ID
+    const currentPlayerId = currentPlayer.id || `player-${currentPlayerIndex}`;
     console.log("Current player ID to be set:", currentPlayerId);
     
     const data = {
@@ -210,11 +221,17 @@ export const updateGameBoardState = async (gameId, gameState) => {
       tile_bag: JSON.stringify(gameState.tileBag)
     };
     
-    const record = await pb.collection('games').update(gameId, data);
-    console.log("Game board state updated successfully:", record);
-    return record;
+    try {
+      const record = await pb.collection('games').update(gameId, data);
+      console.log("Game board state updated successfully:", record);
+      return record;
+    } catch (error) {
+      console.error('Error updating game board state:', error);
+      // Don't throw, just return null to prevent app crashes
+      return null;
+    }
   } catch (error) {
-    console.error('Error updating game board state:', error);
-    throw error;
+    console.error('Error in updateGameBoardState:', error);
+    return null;
   }
 };
