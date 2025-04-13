@@ -56,43 +56,57 @@ export const fetchUserGames = async (userId) => {
   }
 };
 
+// Search for users to add to a game
+export const searchUsers = async (query) => {
+  if (!query || query.length < 2) return [];
+  
+  try {
+    const records = await pb.collection('users').getList(1, 10, {
+      filter: `username ~ "${query}" || email ~ "${query}" || name ~ "${query}"`,
+    });
+    
+    return records.items.map(user => ({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      name: user.name || user.username,
+    }));
+  } catch (error) {
+    console.error('Error searching users:', error);
+    return [];
+  }
+};
+
 // Create a new game with all required fields
 export const createNewGame = async (data) => {
   try {
     console.log("Creating new game with data:", data);
     
+    // Set up the current user as the first player
+    const currentUser = getCurrentUser();
+    if (!currentUser) {
+      throw new Error("User must be logged in to create a game");
+    }
+    
     // Format data to match the required fields for PocketBase
     const gameData = {
       name: data.name || `Game ${new Date().toLocaleString('is-IS')}`,
-      created_by: data.userId,
-      // The current_player_index must be sent as a number (0)
+      created_by: currentUser.id,
       current_player_index: 0,
       status: "in_progress",
       // Store player names in a separate field for our UI
-      playerNames: data.players,
-      // Since the 'players' field requires valid relation records and we don't have them,
-      // we'll omit this field and let the API handle the default values or send an empty array
-      // which is more likely to work than invalid relation ids
-      players: [],
+      playerNames: data.playerNames,
+      // The players field must be a valid relation to user IDs
+      players: [currentUser.id],
       isActive: true,
-      userId: data.userId
+      userId: currentUser.id
     };
     
     console.log("Sending formatted game data:", gameData);
     
-    // First try with players as empty array
-    try {
-      const record = await pb.collection('games').create(gameData);
-      console.log("Game created successfully:", record);
-      return record;
-    } catch (err) {
-      // If that fails, try without the players field entirely
-      delete gameData.players;
-      console.log("Retrying without players field:", gameData);
-      const record = await pb.collection('games').create(gameData);
-      console.log("Game created successfully on retry:", record);
-      return record;
-    }
+    const record = await pb.collection('games').create(gameData);
+    console.log("Game created successfully:", record);
+    return record;
   } catch (error) {
     console.error('Error creating game:', error);
     throw error;

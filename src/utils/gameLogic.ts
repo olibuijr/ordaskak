@@ -1,3 +1,4 @@
+
 export interface Tile {
   id: string;
   letter: string;
@@ -194,7 +195,7 @@ export const initializeGame = (playerCount: number, playerNames: string[] = []):
       name: playerNames[i] || `Player ${i + 1}`,
       score: 0,
       rack: drawn,
-      isAI: i > 0, // First player is human, rest are AI for now
+      isAI: false, // All players are human now
       isActive: i === 0
     });
     

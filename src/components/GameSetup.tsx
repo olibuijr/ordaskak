@@ -1,12 +1,12 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
-import { Users, Brain, UserCircle, List, Check, Play, Plus } from 'lucide-react';
+import { Users, UserCircle, List, Check, Play, Plus, Search } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { pb, fetchUserGames, createNewGame } from '@/services/pocketbase';
+import { pb, fetchUserGames, createNewGame, searchUsers } from '@/services/pocketbase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/components/ui/use-toast';
 import {
@@ -33,16 +33,20 @@ interface GameData {
   name?: string;
 }
 
+interface UserData {
+  id: string;
+  username: string;
+  email: string;
+  name: string;
+}
+
 const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
   const { user } = useAuth();
-  const [playerCount, setPlayerCount] = useState(2);
-  const [playerNames, setPlayerNames] = useState<string[]>([
-    user?.name || user?.username || 'Spilari 1', 
-    'Tölva 1', 
-    'Tölva 2', 
-    'Tölva 3'
-  ]);
   const [showNewGame, setShowNewGame] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<UserData[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<UserData[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const queryClient = useQueryClient();
   
   const fetchGames = async () => {
@@ -56,16 +60,54 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
     }
   };
   
+  const handleSearch = async () => {
+    if (searchQuery.length < 2) return;
+    
+    setIsSearching(true);
+    try {
+      const results = await searchUsers(searchQuery);
+      // Filter out already selected users and the current user
+      const filteredResults = results.filter(
+        result => !selectedUsers.some(u => u.id === result.id) && result.id !== user?.id
+      );
+      setSearchResults(filteredResults);
+    } catch (error) {
+      console.error('Error searching users:', error);
+      toast({
+        title: "Villa við leit",
+        description: "Ekki tókst að leita að notendum.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSearching(false);
+    }
+  };
+  
+  const handleSelectUser = (userData: UserData) => {
+    setSelectedUsers([...selectedUsers, userData]);
+    setSearchResults([]);
+    setSearchQuery('');
+  };
+  
+  const handleRemoveUser = (userId: string) => {
+    setSelectedUsers(selectedUsers.filter(u => u.id !== userId));
+  };
+  
   const createGame = async () => {
     if (!user) return null;
     
     try {
-      const selectedPlayers = playerNames.slice(0, playerCount);
-      console.log("Creating game with players:", selectedPlayers);
+      // Include the current user as the first player
+      const playerNames = [
+        user.name || user.username || 'Þú',
+        ...selectedUsers.map(u => u.name || u.username)
+      ];
+      
+      console.log("Creating game with players:", playerNames);
       
       const data = {
         name: `Leikur ${new Date().toLocaleString('is-IS')}`,
-        players: selectedPlayers,
+        playerNames: playerNames,
         isActive: true,
         userId: user.id
       };
@@ -91,9 +133,13 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
       queryClient.invalidateQueries({ queryKey: ['games'] });
       setShowNewGame(false);
       if (data) {
+        const playerNames = [
+          user?.name || user?.username || 'Þú',
+          ...selectedUsers.map(u => u.name || u.username)
+        ];
         onStartGame(
-          playerCount, 
-          playerNames.slice(0, playerCount)
+          playerNames.length,
+          playerNames
         );
       }
       toast({
@@ -111,11 +157,17 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
     }
   });
   
-  const handleNameChange = (index: number, name: string) => {
-    const newNames = [...playerNames];
-    newNames[index] = name;
-    setPlayerNames(newNames);
-  };
+  useEffect(() => {
+    if (searchQuery.length >= 2) {
+      const delayDebounceFn = setTimeout(() => {
+        handleSearch();
+      }, 300);
+      
+      return () => clearTimeout(delayDebounceFn);
+    } else {
+      setSearchResults([]);
+    }
+  }, [searchQuery]);
   
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -183,48 +235,79 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
                 <h3 className="text-lg font-medium">Nýr leikur</h3>
               </div>
               
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <label className="text-sm font-medium">Fjöldi spilara ({playerCount})</label>
-                  <div className="flex gap-2 text-muted-foreground text-sm">
-                    <span>1</span>
-                    <span>4</span>
-                  </div>
-                </div>
-                <Slider 
-                  value={[playerCount]} 
-                  min={1} 
-                  max={4} 
-                  step={1} 
-                  onValueChange={(val) => setPlayerCount(val[0])} 
-                  className="my-4"
-                />
-              </div>
-              
               <div className="space-y-4">
-                <h3 className="text-sm font-medium mb-2">Nöfn spilara</h3>
+                <h3 className="text-sm font-medium mb-2">Spilarar</h3>
                 
                 <div className="flex items-center space-x-3">
                   <UserCircle className="h-5 w-5 text-game-accent-blue" />
                   <Input
-                    value={playerNames[0]}
+                    value={user?.name || user?.username || 'Notandi'}
                     readOnly
                     className="bg-game-dark/60 cursor-default"
                     placeholder="Þitt nafn"
                   />
                 </div>
                 
-                {Array.from({ length: Math.min(playerCount - 1, 3) }).map((_, i) => (
-                  <div key={i + 1} className="flex items-center space-x-3">
-                    <Brain className="h-5 w-5 text-game-accent-purple" />
-                    <Input
-                      value={playerNames[i + 1]}
-                      onChange={(e) => handleNameChange(i + 1, e.target.value)}
-                      className="bg-game-dark/60"
-                      placeholder={`Tölva ${i + 1}`}
-                    />
+                {/* Search for other players */}
+                <div className="space-y-4 mt-4">
+                  <div className="relative">
+                    <div className="flex space-x-2">
+                      <Input
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="bg-game-dark/60"
+                        placeholder="Leita að öðrum spilurum"
+                      />
+                      <Button 
+                        onClick={handleSearch}
+                        className="bg-game-accent-blue hover:bg-game-accent-blue/80 text-black"
+                        disabled={isSearching || searchQuery.length < 2}
+                      >
+                        <Search className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
+                    {searchResults.length > 0 && (
+                      <div className="absolute mt-1 w-full z-10 bg-game-dark rounded-md shadow-lg max-h-60 overflow-auto">
+                        <ScrollArea className="p-1">
+                          {searchResults.map((result) => (
+                            <div 
+                              key={result.id}
+                              className="p-2 hover:bg-game-accent-blue/20 cursor-pointer rounded-sm"
+                              onClick={() => handleSelectUser(result)}
+                            >
+                              <p className="font-medium">{result.name || result.username}</p>
+                              <p className="text-sm text-muted-foreground truncate">{result.email}</p>
+                            </div>
+                          ))}
+                        </ScrollArea>
+                      </div>
+                    )}
                   </div>
-                ))}
+                  
+                  {/* Selected users */}
+                  {selectedUsers.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium">Valdir spilarar</h4>
+                      {selectedUsers.map((selectedUser) => (
+                        <div key={selectedUser.id} className="flex justify-between items-center p-2 bg-game-dark/30 rounded-md">
+                          <div className="flex items-center space-x-2">
+                            <UserCircle className="h-5 w-5 text-game-accent-purple" />
+                            <span>{selectedUser.name || selectedUser.username}</span>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleRemoveUser(selectedUser.id)}
+                            className="text-red-400 hover:text-red-500 hover:bg-transparent"
+                          >
+                            Fjarlægja
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               
               <Button 
@@ -315,7 +398,7 @@ const GameSetup: React.FC<GameSetupProps> = ({ onStartGame }) => {
                                 <TableCell>{formatDate(game.created)}</TableCell>
                                 <TableCell>{game.players.join(', ')}</TableCell>
                                 <TableCell>
-                                  {game.winner === playerNames[0] ? (
+                                  {game.winner === user?.name || game.winner === user?.username ? (
                                     <span className="text-game-accent-green font-medium">Þú vannst!</span>
                                   ) : (
                                     <span>{game.winner} vann</span>
