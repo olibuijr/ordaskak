@@ -14,11 +14,13 @@ import {
 } from '@/utils/gameLogic';
 import { useToast } from '@/components/ui/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
+import WordHistoryTable from './WordHistoryTable';
 
 const Game: React.FC = () => {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [selectedTile, setSelectedTile] = useState<Tile | null>(null);
   const [placedTilesMap, setPlacedTilesMap] = useState<Map<string, PlacedTile>>(new Map());
+  const [wordHistory, setWordHistory] = useState<Array<{word: string, player: string, score: number}>>([]);
   const { toast } = useToast();
   const isMobile = useIsMobile();
   
@@ -115,6 +117,16 @@ const Game: React.FC = () => {
     }, 0);
     
     currentPlayer.score += scoreToAdd;
+    
+    // Create a word from the newly placed tiles (simplified for demo)
+    const word = newGameState.placedTiles.map(tile => tile.letter).join('');
+    
+    // Add to word history
+    setWordHistory(prev => [...prev, {
+      word,
+      player: currentPlayer.name,
+      score: scoreToAdd
+    }]);
     
     // Draw new tiles for the current player
     const tilesToDraw = 7 - currentPlayer.rack.length;
@@ -230,59 +242,47 @@ const Game: React.FC = () => {
   const currentPlayer = gameState.players[gameState.currentPlayerIndex];
   
   return (
-    <div className="container mx-auto px-4 py-6 flex flex-col md:flex-row gap-6 min-h-screen">
-      <div className="md:w-3/4 h-[60vh] md:h-[85vh] flex flex-col">
-        {/* 3D Game board */}
-        <div className="flex-grow relative rounded-lg overflow-hidden border border-game-accent-blue/30">
-          <GameBoardCanvas 
-            board={gameState.board} 
-            onCellClick={handleCellClick}
-          />
+    <div className="container mx-auto px-4 py-6 flex flex-col gap-6 min-h-screen">
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Main game section */}
+        <div className="lg:w-3/4 flex flex-col">
+          {/* 3D Game board */}
+          <div className="h-[60vh] md:h-[65vh] relative rounded-lg overflow-hidden border border-game-accent-blue/30">
+            <GameBoardCanvas 
+              board={gameState.board} 
+              onCellClick={handleCellClick}
+            />
+          </div>
+          
+          {/* Player rack */}
+          <div className="mt-4">
+            <PlayerRack
+              tiles={currentPlayer.rack}
+              isCurrentPlayer={true}
+              onTileClick={handleTileClick}
+              selectedTileId={selectedTile?.id || null}
+            />
+            
+            <GameControls
+              currentPlayer={currentPlayer}
+              onPlayWord={handlePlayWord}
+              onShuffleTiles={handleShuffleTiles}
+              onPassTurn={handlePassTurn}
+              onRecallTiles={handleRecallTiles}
+              canPlay={gameState.placedTiles.length > 0}
+            />
+          </div>
         </div>
         
-        {/* Player rack */}
-        <div className="mt-4">
-          <PlayerRack
-            tiles={currentPlayer.rack}
-            isCurrentPlayer={true}
-            onTileClick={handleTileClick}
-            selectedTileId={selectedTile?.id || null}
+        {/* Sidebar */}
+        <div className="lg:w-1/4 flex flex-col gap-4">
+          <ScoreBoard
+            players={gameState.players}
+            tilesRemaining={gameState.tileBag.length}
           />
           
-          <GameControls
-            currentPlayer={currentPlayer}
-            onPlayWord={handlePlayWord}
-            onShuffleTiles={handleShuffleTiles}
-            onPassTurn={handlePassTurn}
-            onRecallTiles={handleRecallTiles}
-            canPlay={gameState.placedTiles.length > 0}
-          />
-        </div>
-      </div>
-      
-      <div className="md:w-1/4">
-        <ScoreBoard
-          players={gameState.players}
-          tilesRemaining={gameState.tileBag.length}
-        />
-        
-        {/* Other player racks for visibility */}
-        <div className="mt-6 space-y-4">
-          {gameState.players
-            .filter((p) => p.id !== currentPlayer.id)
-            .map((player) => (
-              <div key={player.id} className="space-y-1">
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">{player.name}'s rack</span>
-                </div>
-                <PlayerRack
-                  tiles={player.rack}
-                  isCurrentPlayer={false}
-                  onTileClick={() => {}}
-                  selectedTileId={null}
-                />
-              </div>
-            ))}
+          {/* Word history table */}
+          <WordHistoryTable words={wordHistory} />
         </div>
       </div>
     </div>
