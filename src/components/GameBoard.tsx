@@ -46,7 +46,7 @@ const Cell: React.FC<{
       receiveShadow
     >
       <boxGeometry args={[0.9, 0.1, 0.9]} />
-      <meshStandardMaterial color={color} />
+      <meshStandardMaterial color={color as any} />
       
       {cell.tile ? (
         <group position={[0, 0.11, 0]}>
@@ -112,15 +112,15 @@ const Board: React.FC<GameBoardProps> = ({ board, onCellClick }) => {
       {/* Board background */}
       <mesh position={[0, -0.1, 0]} receiveShadow>
         <boxGeometry args={[boardSize + 0.5, 0.2, boardSize + 0.5]} />
-        <meshStandardMaterial color="#0F1624" />
+        <meshStandardMaterial color={"#0F1624" as any} />
       </mesh>
       
       {/* Border with glow effect */}
       <mesh position={[0, -0.05, 0]}>
         <boxGeometry args={[boardSize + 0.8, 0.02, boardSize + 0.8]} />
         <meshStandardMaterial
-          color="#64FFDA"
-          emissive="#64FFDA"
+          color={"#64FFDA" as any}
+          emissive={"#64FFDA" as any}
           emissiveIntensity={0.5}
         />
       </mesh>
